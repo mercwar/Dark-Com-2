@@ -1,67 +1,138 @@
+
 <a target="_self" title="CLICK HERE to ENTER the GATEWAY FREE!" href="https://mercwar.github.io/Constellation/index.html">
 <img 
     src="https://raw.githubusercontent.com/mercwar/Robo-Knight-Gallery/refs/heads/main/Version%207/image_d2a07390.png" 
     alt="Mercwar Constellation" 
-    style="width:100%; height:auto;"
+    style="width:100%; height:auto; border-radius:12px; box-shadow:0 6px 16px rgba(0,0,0,0.6);"
 />
 </a>
 
+---
 
-## ✨ Joe Tron's Dark-Com-2 💎🔥
+# ✨ Joe Tron's Dark-Com-2 💎🔥
+
+![dc](images/ChatGPT%20Image%20Sep%204%2C%202026%2C%2005_12_02%20AM.png)
 
 ---
 
+## 1. Overview 💎🔥
+Dark-Com-2 isn’t just another browser wrapper — it’s a **Win32-native beast**. Built directly on Microsoft WebView2 C++ controller architecture, it bypasses bloated runtimes and talks straight to the OS with hardware-accelerated messaging.  
 
-![Dark-Com-2 Banner](https://github.com/mercwar/Dark-Com-2/blob/main/images/ChatGPT%20Image%20Sep%204%2C%202026%2C%2005_12_02%20AM.png)
-
-## Overview 💎🔥
-**Dark-Com-2** is an open-source Win32-integrated desktop panel navigation browser engine built on the Microsoft WebView2 controller runtime environment. It features a native address navigation bar, fully managed layouts, dynamic wide-character string translation, and automated caching designed for standalone deployment loops.
-
----
-
-## Features 💎🔥
-- **Localized Cache Rooting:** Automated generation of profiles bound inside the execution layer to eliminate missing system folder path parameters.  
-- **Native Desktop Panel UI:** Lightweight Win32 forms hosting custom layout managers for dynamic navigation controls.  
-- **Streamlined Deployment:** Zero runtime file configuration adjustments needed. Everything launches out of the box.  
+Think of it as your **personal command gateway**: lean, fast, and unapologetically raw.
 
 ---
 
-## Prerequisites 💎🔥
-Before running Dark-Com-2, ensure the following are installed:
-1. **Microsoft Edge WebView2 Runtime**  
-   - Preinstalled on Windows 11.  
-   - For Windows 10, download from Microsoft’s official site.  
-2. **Microsoft Visual C++ 2015–2022 Redistributable (x64)**  
-   - Required for linking and runtime execution.  
+## 2. Features 💎🔥
+- **Localized Cache Rooting** → No directory headaches, it auto-roots itself.  
+- **Native Desktop Panel UI** → Ultra-fast orchestration with Win32 handles.  
+- **Streamlined Deployment** → Zero config. Just run it.  
+- **Unicode Compliance** → No string truncation nightmares.  
+- **Baked-In Assets** → Icons and branding fused into the binary.  
 
 ---
 
-## Installation & Setup 💎🔥
-
-
-
-
-Sources: Internal project instructions
+## 3. Prerequisites 💎🔥
+Before you dive in, make sure you’ve got:
+- **WebView2 Runtime** (Win11: built-in, Win10: install Evergreen).  
+- **VC++ 2015–2022 Redistributable** (x64).  
 
 ---
 
-## File Infrastructure 💎🔥
+## 4. Installation & Setup 💎🔥
+1. Run `install_webview2.bat` → auto-fetches WebView2 assemblies.  
+2. Run `Dark-Com-2.bat` → compiles everything into a standalone binary.  
+
+---
+
+## 5. File Infrastructure 💎🔥
 ```text
 📁 Dark-Com-2/
 │
-├── 📄 Dark-Com-2.exe          <-- Compiled deployment binary application
-├── 📄 WebView2Loader.dll      <-- Automatically copied link engine loader
+├── 📄 main.cpp                <-- Core engine
+├── 📄 resource.rc             <-- Asset script
+├── 📄 favi-con.ico            <-- Embedded icon
+│
+├── 📄 Dark-Com-2.exe          <-- Final binary
+├── 📄 WebView2Loader.dll      <-- Runtime loader
 │
 ├── 📁 packages/
-│   └── 📁 browser_cache/      <-- Dynamic localized sandbox workspace profile
+│   └── 📁 browser_cache/      <-- Sandbox profile
 │
 └── 📁 images/
-    └── 📄 ChatGPT Image Sep 4, 2026, 05_12_02 AM.png  <-- Primary Repository Banner
+    └── 📄 ChatGPT Image Sep 4, 2026, 05_12_02 AM.png
 ```
 
 ---
 
-## 🚀 Summary
-With **install_webview2.bat**, end users don’t need to worry about paths — the script auto-detects its directory, downloads the WebView2 NuGet package, and extracts it into the correct `packages` folder. Then, running **Dark-Com-2.bat** compiles the project into a ready-to-run executable with all dependencies bundled.
+## 6. 🚀 Summary
+Dark-Com-2 is designed for **instant deployment**. No configs, no headaches. Just run the batch files and watch it build itself into a glowing executable.
 
-👉 Demon, do you want me to extend this tutorial with a **step for distributing Dark-Com-2 as a portable ZIP** (including runtime DLLs), so end users can run it without installing anything extra?
+---
+
+## 7. Legal 💎🔥
+Distributed under open-source license. Provided “AS IS.” You’re responsible for compliance. Microsoft WebView2 is a trademark of Microsoft Corporation.
+
+---
+
+## 8. Repository Cloning 💎🔥
+Ready to get your hands dirty? Let’s make this interactive.  
+
+👉 **Step 1: Clone the repo**  
+```cmd
+git clone https://github.com/mercwar/Dark-Com-2.git
+```
+
+👉 **Step 2: Run the one-click batch file**  
+This script clones the repo **and** installs the VC++ Redistributable automatically.  
+
+```bat
+:: ============================================
+:: AIFVS-ARTIFACT
+:: File: net-install.bat
+:: AVIS Neon Artifact - Repo Clone + Redist
+:: ============================================
+
+@echo off
+setlocal
+
+echo [INFO] Cloning Dark-Com-2 repository...
+git clone https://github.com/mercwar/Dark-Com-2.git
+
+echo [INFO] Downloading VC++ Redistributable...
+set REDIST_URL=https://aka.ms/vs/17/release/vc_redist.x64.exe
+set REDIST_EXE=vc_redist.x64.exe
+
+powershell -Command "Invoke-WebRequest -Uri %REDIST_URL% -OutFile %REDIST_EXE%"
+%REDIST_EXE% /install /quiet /norestart
+
+echo [SUCCESS] Repo cloned + Redist installed!
+echo Next: Run Dark-Com-2.bat to compile the engine.
+
+endlocal
+pause
+exit /b 0
+```
+
+---
+
+## 🎤 Cyborg Challenge
+All in 1 .cpp file !
+
+- Clone the repo.  
+- Run the batch files to install the enviorment.  
+- Compile the cpp file
+- run the exe
+---
+
+## 7. Legal 💎🔥
+
+Dark-Com-2 is released as a **public artifact** under open-source licensing. That means you’re free to explore, modify, and redistribute — but you do so at your own risk.  
+
+- **Warranty Disclaimer:** All code, binaries, and documentation are provided **“AS IS”**. No guarantees, no promises — just raw engineering power.  
+- **Liability Shield:** The authors and copyright holders are not responsible for damages, claims, or liabilities that may arise from using, misusing, or redistributing this software.  
+- **Compliance Responsibility:** You, the user, are responsible for ensuring compliance with local laws and regulations when deploying or sharing Dark-Com-2.  
+- **Trademark Notice:** **Microsoft WebView2** is a trademark of Microsoft Corporation. Its runtime components remain subject to Microsoft’s licensing terms.  
+
+---
+
+© 2026 – mercwar. All Rights Reserved. **Public Artifact Edition.**  

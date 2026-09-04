@@ -43,13 +43,11 @@ Requirements for Developers:
 
 ##### "<i>I am CVBGOD, and I have given it to you</i>!"
 
+![dc](images/ChatGPT%20Image%20Sep%204%2C%202026%2C%2006_51_00%20AM.png)
+
 #
 
 ## ✨ *...And now the official Dark-Com-2 Readme*
-
-
-![dc](images/ChatGPT%20Image%20Sep%204%2C%202026%2C%2006_42_27%20AM.png)
-
 
 ## 1. Overview 💎🔥
 Dark-Com-2 isn’t just another browser wrapper — it’s a **Win32-native beast**. Built directly on Microsoft WebView2 C++ controller architecture, it bypasses bloated runtimes and talks straight to the OS with hardware-accelerated messaging.  
@@ -73,6 +71,7 @@ Before you dive in, make sure you’ve got:
 - **VC++ 2015–2022 Redistributable** (x64).  
 
 ---
+![dc](images/ChatGPT%20Image%20Sep%204%2C%202026%2C%2006_42_27%20AM.png)
 
 ## 4. Installation & Setup 💎🔥
 1. Run `install_webview2.bat` → auto-fetches WebView2 assemblies.  
@@ -80,7 +79,7 @@ Before you dive in, make sure you’ve got:
 
 ---
 
-![dc](images/ChatGPT%20Image%20Sep%204%2C%202026%2C%2006_51_26%20AM.png)
+
 
 ## 5. File Infrastructure 💎🔥
 ```text
@@ -125,8 +124,8 @@ Dark-Com-2 is designed for **instant deployment**. No configs, no headaches. Jus
 ---
 
 ## 7. How it works 💎🔥
+![dc](images/ChatGPT%20Image%20Sep%204%2C%202026%2C%2006_51_26%20AM.png)
 
-![dc](images/ChatGPT%20Image%20Sep%204%2C%202026%2C%2005_12_02%20AM.png)
 
 - Dark-Com-2 is a Web browser that uses Microsoft Windows Webview (Edge) 
 - It calls for Windows to provide an instance of the browser (WebView2Loader.dll)
@@ -230,7 +229,7 @@ pause
 exit /b 0
 
 ```
-
+![dc](images/ChatGPT%20Image%20Sep%204%2C%202026%2C%2005_12_02%20AM.png)
 ---
 
 ## 🎤 Cyborg Challenge
@@ -239,7 +238,9 @@ All in 1 .cpp file !
 - Clone the repo.  
 - Run the batch files to install the enviorment.  
 - Compile the cpp file
-- run the exe
+- Run the exe
+- Then ...
+- Get ready for AVIS!
 ---
 
 ## 7. Legal 💎🔥

@@ -4,7 +4,7 @@ Here’s a polished **tutorial-style README** for your **Dark-Com-2 💎🔥** p
 
 # Dark-Com-2 💎🔥
 
-![Dark-Com-2 Banner](https://github.com)
+![Dark-Com-2 Banner](https://github.com/mercwar/Dark-Com-2/blob/main/images/ChatGPT%20Image%20Sep%204%2C%202026%2C%2005_12_02%20AM.png)
 
 ## Overview 💎🔥
 **Dark-Com-2** is an open-source Win32-integrated desktop panel navigation browser engine built on the Microsoft WebView2 controller runtime environment. It features a native address navigation bar, fully managed layouts, dynamic wide-character string translation, and automated caching designed for standalone deployment loops.

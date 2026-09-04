@@ -41,14 +41,15 @@ Requirements for Developers:
 ## 🎤 All in 1 .cpp file, Your Done!
 
 
-##### "<i>I am CVBGOD, and I have given it to you</i>!"
+
+## ✨ *... And now the official Dark-Com-2 Readme*
 
 ![dc](images/ChatGPT%20Image%20Sep%204%2C%202026%2C%2006_51_00%20AM.png)
 
+###### "<i>I am CVBGOD, and I have given it to you</i>!"
 #
 
-## ✨ *...And now the official Dark-Com-2 Readme*
-
+# ✨ Dark-Com-2 Stargate
 ## 1. Overview 💎🔥
 Dark-Com-2 isn’t just another browser wrapper — it’s a **Win32-native beast**. Built directly on Microsoft WebView2 C++ controller architecture, it bypasses bloated runtimes and talks straight to the OS with hardware-accelerated messaging.  
 

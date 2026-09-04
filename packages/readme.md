@@ -13,7 +13,10 @@
 
 ![dc](../images/ChatGPT%20Image%20Sep%204%2C%202026%2C%2006_51_00%20AM.png)
 
-This Uplink: The Official Dark-Com-2 [Readme](../README.md)
+###### <i> Joe Tron "The CVBGOD" Finally did it! </i>
+###### "<i><b>Now...</b> The Microsoft Windows Redist gives it to you TOO</i>!"
+
+#### This Uplink: The Official Dark-Com-2 [Readme](../README.md)
 
 <!-- ============================================
      ⚡ Automated Installation via Batch Files

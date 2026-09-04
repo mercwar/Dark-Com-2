@@ -13,6 +13,8 @@
 
 ![dc](../images/ChatGPT%20Image%20Sep%204%2C%202026%2C%2006_51_00%20AM.png)
 
+Back to: The Official Dark-Com-2 [Readme](packages/readme.md)
+
 <!-- ============================================
      ⚡ Automated Installation via Batch Files
      ============================================ -->

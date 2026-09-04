@@ -127,7 +127,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     RegisterClassExW(&wcex);
 
     // Update the window title text to Dark-Com-2
-    g_hWndParent = CreateWindowExW(0, L"AVIS_FORM_BROWSER", L"Dark-Com-2", 
+    g_hWndParent = CreateWindowExW(0, L"AVIS_FORM_BROWSER", L"Joe Tron's Dark-Com-2", 
                                    WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 
                                    1280, 1024, NULL, NULL, hInstance, NULL);
 

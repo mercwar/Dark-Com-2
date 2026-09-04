@@ -1,8 +1,16 @@
-Here’s a polished **tutorial-style README** for your **Dark-Com-2 💎🔥** project, expanded with clear steps and end-user guidance. This version walks through prerequisites, installation, and compilation in a way that feels like a professional onboarding guide.
+<a target="_self" title="CLICK HERE to ENTER the GATEWAY FREE!" href="https://mercwar.github.io/Constellation/index.html">
+<img 
+    src="https://raw.githubusercontent.com/mercwar/Robo-Knight-Gallery/refs/heads/main/Version%207/image_d2a07390.png" 
+    alt="Mercwar Constellation" 
+    style="width:100%; height:auto;"
+/>
+</a>
+
+
+## ✨ Joe Tron's Dark-Com-2 💎🔥
 
 ---
 
-# Dark-Com-2 💎🔥
 
 ![Dark-Com-2 Banner](https://github.com/mercwar/Dark-Com-2/blob/main/images/ChatGPT%20Image%20Sep%204%2C%202026%2C%2005_12_02%20AM.png)
 

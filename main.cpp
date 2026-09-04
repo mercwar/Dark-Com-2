@@ -129,7 +129,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     // Update the window title text to Dark-Com-2
     g_hWndParent = CreateWindowExW(0, L"AVIS_FORM_BROWSER", L"Dark-Com-2", 
                                    WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 
-                                   1200, 800, NULL, NULL, hInstance, NULL);
+                                   1280, 1024, NULL, NULL, hInstance, NULL);
 
     if (!g_hWndParent) return 0;
 

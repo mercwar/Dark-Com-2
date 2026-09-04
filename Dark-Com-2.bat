@@ -1,6 +1,6 @@
 @echo off
 echo ============================================
-echo  AIFVS-ARTIFACT: build_webview2.bat
+echo  AIFVS-ARTIFACT: Dark-Com-2.bat
 echo  Auto MSVC env + Compile WebView2 View Engine
 echo ============================================
 
@@ -26,10 +26,11 @@ if exist favi-con.ico (
 
 echo Building application window layer: Dark-Com-2.exe
 
-:: Compile application code and dynamic link associations
+:: Compile application code with explicit Unicode definitions to fix string truncation
 cl ^
   main.cpp ^
   resource.res ^
+  /DUNICODE /D_UNICODE ^
   /I "packages\Microsoft.Web.WebView2\build\native\include" ^
   /Fe:Dark-Com-2.exe ^
   /EHsc ^

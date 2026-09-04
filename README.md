@@ -12,6 +12,9 @@
 # ✨ Joe Tron's Dark-Com-2 💎🔥
 
 ![dc](images/ChatGPT%20Image%20Sep%204%2C%202026%2C%2006_51_00%20AM.png)
+
+NOTE: The Official WebView2 `/packages` README can be found [HERE](packages/readme.md)
+
 #
 
 

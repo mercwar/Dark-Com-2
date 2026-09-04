@@ -75,18 +75,35 @@ Before you dive in, make sure you’ve got:
 ```text
 📁 Dark-Com-2/
 │
-├── 📄 main.cpp                <-- Core engine
-├── 📄 resource.rc             <-- Asset script
-├── 📄 favi-con.ico            <-- Embedded icon
+├── 📁 src/                     <-- Source code
+│   ├── 📄 main.cpp             <-- Core Win32 + WebView2 engine
+│   └── 📄 resource.rc          <-- Resource script
 │
-├── 📄 Dark-Com-2.exe          <-- Final binary
-├── 📄 WebView2Loader.dll      <-- Runtime loader
+├── 📁 include/                 <-- Header files
+│   └── 📄 WebView2.h           <-- WebView2 SDK header
 │
-├── 📁 packages/
-│   └── 📁 browser_cache/      <-- Sandbox profile
+├── 📁 assets/                  <-- Icons, branding, artwork
+│   └── 📄 favi-con.ico
 │
-└── 📁 images/
-    └── 📄 ChatGPT Image Sep 4, 2026, 05_12_02 AM.png
+├── 📁 build/                   <-- Build outputs
+│   ├── 📄 Dark-Com-2.exe       <-- Compiled binary
+│   ├── 📄 resource.res         <-- Compiled resources
+│   ├── 📄 main.obj             <-- Object file
+│   └── 📄 WebView2Loader.dll   <-- Runtime loader
+│
+├── 📁 packages/                <-- External packages
+│── 📁 browser_cache/           <-- Localized profile
+│
+├── 📁 scripts/                 <-- Batch installers & utilities
+│   ├── 📄 Dark-Com-2.bat
+│   ├── 📄 Install_MS_WebView2.bat
+│   ├── 📄 net-install.bat
+│   └── 📄 nuget.exe
+│
+├── 📁 dist/                    <-- Distribution artifacts
+│   └── 📄 Dark-Com-2.zip       <-- Packaged release
+│
+└── 📄 README.md                <-- Documentation
 ```
 
 ---

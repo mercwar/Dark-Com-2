@@ -41,7 +41,7 @@ Requirements for Developers:
 ## 🎤 All in 1 .cpp file, Your Done!
 
 
-##### "<i>I am CVBGOD, and I have given it to you...</i>"
+##### "<i>I am CVBGOD, and I have given it to you</i>!"
 
 #
 

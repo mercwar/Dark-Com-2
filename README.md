@@ -255,4 +255,4 @@ Dark-Com-2 is released as a **public artifact** under open-source licensing. Tha
 
 ---
 
-© 2026 – mercwar. All Rights Reserved. **Public Artifact Edition.**  
+© 2026 – Mercwar. All Rights Reserved. **Public Artifact Edition.**  

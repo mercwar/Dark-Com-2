@@ -11,8 +11,8 @@
 
 # ✨ Joe Tron's Dark-Com-2 💎🔥
 
-![dc](images/ChatGPT%20Image%20Sep%204%2C%202026%2C%2005_12_02%20AM.png)
 
+![dc](images/ChatGPT%20Image%20Sep%204%2C%202026%2C%2006_42_27%20AM.png)
 
 Requirements for Users:
 - Run the Dark-Com-2.exe file after you clone the repo
@@ -92,9 +92,15 @@ Dark-Com-2 is designed for **instant deployment**. No configs, no headaches. Jus
 
 ---
 
-## 7. Legal 💎🔥
-Distributed under open-source license. Provided “AS IS.” You’re responsible for compliance. Microsoft WebView2 is a trademark of Microsoft Corporation.
+## 7. How it works 💎🔥
 
+![dc](images/ChatGPT%20Image%20Sep%204%2C%202026%2C%2005_12_02%20AM.png)
+
+- Dark-Com-2 is a Web browser that uses Microsoft Windows Webview (Edge) 
+- It calls for Windows to provide an instance of the browser (WebView2Loader.dll)
+- It keeps a copy of its records in the directory root of the application Dark-Com-2.exe file So you can log in and save your data normally
+- You can always copy the browser_cache to any other folder you want to save your log in info
+ 
 ---
 
 ## 8. Repository Cloning 💎🔥

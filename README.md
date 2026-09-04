@@ -9,8 +9,14 @@
 
 ---
 
-# ✨ Joe Tron's Dark-Com-2 💎🔥
-
+# ✨ Joe Tron's Dark-Com-2 WEB BROWSER 💎🔥
+- For MSVC
+- CPP/EXE Version (Single File)
+- True Native MS Windows Runtime
+- Low cost Memory/Cpu Fast Browsing
+- Official Mercwar Open Source Wrapper
+- CVBGOD's CPP file for  the Official MSVC BT and Official WebView2 Microsoft Device 
+  
 ![dc](images/ChatGPT%20Image%20Sep%204%2C%202026%2C%2006_51_00%20AM.png)
 
 This Uplink: The Official WebView2 `/packages` [Readme](packages/readme.md)

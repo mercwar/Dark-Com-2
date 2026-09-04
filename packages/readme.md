@@ -252,6 +252,6 @@ This includes but is not limited to data loss, system instability, or security v
 
 <h2>© Copyright</h2>
 <p>
-© 2026 mercwar. All Rights Reserved.  
+© 2026 Mercwar. All Rights Reserved.  
 Dark‑Com‑2 is released as a <strong>Public Artifact Edition</strong>.
 </p>

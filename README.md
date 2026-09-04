@@ -18,10 +18,7 @@
 - CVBGOD's CPP file for the Official WebView2 Microsoft Device 
 - Low cost CPU/RAM for Fast Browsing
 - Navigation bar for regular surfing
-
-  - The Free MSVC Compiler can be 
-    
-
+- No Java/VB runtimes needed
 
 This Uplink: The Official WebView2 `/packages` [Readme](packages/readme.md)
 

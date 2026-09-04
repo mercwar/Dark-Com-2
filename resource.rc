@@ -1,0 +1,7 @@
+// resource.rc
+// AIFVS-ARTIFACT: Resource Configuration for Dark-Com-2
+
+#include <windows.h>
+
+// Define the icon resource ID (101 is standard for the main application icon)
+IDI_APP_ICON ICON "favi-con.ico"

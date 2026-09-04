@@ -13,7 +13,30 @@
 
 ![dc](images/ChatGPT%20Image%20Sep%204%2C%202026%2C%2005_12_02%20AM.png)
 
----
+
+Requirements for Users:
+- Run the Dark-Com-2.exe file after you clone the repo
+- you can also run the net-installer and if you need the runtime the net-installer installs it for you
+
+Requirements for Developers:
+- Install MSVC Buiild Tools
+- Clone the Dark-Com-2 repo / run net-install
+- Run Install_MS_WebView2
+- Run Dark-Com-2.bat
+- Dark-Com-2.exe will auto Load
+
+## 🎤 All in 1 .cpp file, Your Done!
+
+
+##### "<i>I am CVBGOD, and I have given it to you...</i>"
+
+#
+
+...And now the official Dark-Com-2 Readme
+
+
+#
+
 
 ## 1. Overview 💎🔥
 Dark-Com-2 isn’t just another browser wrapper — it’s a **Win32-native beast**. Built directly on Microsoft WebView2 C++ controller architecture, it bypasses bloated runtimes and talks straight to the OS with hardware-accelerated messaging.  

@@ -147,7 +147,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     std::wstring appRootDir = (lastSlashPos != std::wstring::npos) ? modulePath.substr(0, lastSlashPos) : L".";
     
     // Root the browser profile storage folder cleanly relative to the executable
-    std::wstring cachePath = appRootDir + L"\\packages\\browser_cache";
+    std::wstring cachePath = appRootDir + L"\\browser_cache";
     
     // Initialize WebView2 Engine with the dynamically isolated local cache path
     CreateCoreWebView2EnvironmentWithOptions(nullptr, cachePath.c_str(), nullptr,

@@ -134,7 +134,21 @@ Dark-Com-2 is designed for **instant deployment**. No configs, no headaches. Jus
 - You can always copy the browser_cache to any other folder you want to run the exe and use different sets of log in info
 - Keep the name browser_cache copy to another folder with the exe and run files including WebView2Loader.dll
 - You will see a new browser_cache folder in whatever browser you run (.exe), this log in info you save during your surf, will be saved independantly from other browser_cache folders
-- Try saving the browser cache in a different folder and modifying the line 
+- Try saving the browser cache in a different folder and modifying the line 150 WinMain, this is where you name your directory.
+- Create an ini file or json file with the names of your personal browser_cache folders compatible with this version of WebView2 .
+- Now add a control on the form , a list box and load the list form the ini file
+- Choose to select the current value of the list and that should be a directory name , now apply that variable ahead of creatwindow using a global
+- That global should be restored form the previous session , so if you give your end user a button it says 'Apply' and apply is a section in the json file or a seperate file
+- Now when the user restarts the application you load the recent press of the apply button to the global
+- Now use that global char name the replacement for browser_cache
+- You completed the mod and now your end user can select different <browser_cache> folders editing the ini/json file with any name, not only browser_cache
+- Add a list box so the user can save to the ini file without using notpad, YOUR DONE!
+
+  ```
+      // Root the browser profile storage folder cleanly relative to the executable
+    std::wstring cachePath = appRootDir + L"\\browser_cache";
+  
+  ```
 ---
 
 ## 8. Repository Cloning 💎🔥

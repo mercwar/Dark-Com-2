@@ -131,9 +131,10 @@ Dark-Com-2 is designed for **instant deployment**. No configs, no headaches. Jus
 - Dark-Com-2 is a Web browser that uses Microsoft Windows Webview (Edge) 
 - It calls for Windows to provide an instance of the browser (WebView2Loader.dll)
 - It keeps a copy of its records in the directory root of the application Dark-Com-2.exe file So you can log in and save your data normally
-- You can always copy the browser_cache to any other folder you want to run the  exe and use different sets of log in info (browser_cache)
-- save your log in info
- 
+- You can always copy the browser_cache to any other folder you want to run the exe and use different sets of log in info
+- Keep the name browser_cache copy to another folder with the exe and run files including WebView2Loader.dll
+- You will see a new browser_cache folder in whatever browser you run (.exe), this log in info you save during your surf, will be saved independantly from other browser_cache folders
+- Try saving the browser cache in a different folder and modifying the line 
 ---
 
 ## 8. Repository Cloning 💎🔥

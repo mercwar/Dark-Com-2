@@ -1,4 +1,4 @@
-name: Verify Repository Topics
+name: Verify Old Repository Topics
 
 on:
   push:

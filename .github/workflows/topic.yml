@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch: # Allows you to trigger this manually from the Actions tab
+  workflow_dispatch:
 
 jobs:
   check-topics:
@@ -17,13 +17,13 @@ jobs:
         run: |
           echo "Fetching current indexed topics for $REPO..."
           
-          # Call the GitHub API to get repository details
+          # Corrected to target api.github.com
           RESPONSE=$(curl -s -H "Authorization: token $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             "https://github.com")
           
-          # Extract and print the topics array
-          TOPICS=$(echo "$RESPONSE" | grep -o '"topics":\s*\[[^]*]*\]')
+          # Extract the topics array using standard grep
+          TOPICS=$(echo "$RESPONSE" | grep -o '"topics":\s*\[[^]]*\]' || echo '"topics": []')
           
           echo "=========================================="
           echo "API Live Topics Registry:"

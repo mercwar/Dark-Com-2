@@ -15,19 +15,17 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
-         echo "Fetching current indexed topics for $REPO..."
+          echo "Fetching current indexed topics for $REPO..."
 
+          # Correct API endpoint for topics
           RESPONSE=$(curl -s \
             -H "Authorization: token $GH_TOKEN" \
             -H "Accept: application/vnd.github.mercy-preview+json" \
             "https://api.github.com/repos/$REPO/topics")
-          
-          TOPICS=$(echo "$RESPONSE" | grep -o '"names":\s*
-          
-          \[[^]]*\]
-          
-          ' || echo '"names": []')
-          
+
+          # Extract the names array using jq (reliable JSON parsing)
+          TOPICS=$(echo "$RESPONSE" | jq '.names')
+
           echo "=========================================="
           echo "API Live Topics Registry:"
           echo "$TOPICS"

@@ -1,0 +1,32 @@
+name: Verify Repository Topics
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  check-topics:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Topics from GitHub API
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          echo "Fetching current indexed topics for $REPO..."
+
+          # Correct API endpoint for topics
+          RESPONSE=$(curl -s \
+            -H "Authorization: token $GH_TOKEN" \
+            -H "Accept: application/vnd.github.mercy-preview+json" \
+            "https://api.github.com/repos/$REPO/topics")
+
+          # Extract the names array using jq (reliable JSON parsing)
+          TOPICS=$(echo "$RESPONSE" | jq '.names')
+
+          echo "=========================================="
+          echo "API Live Topics Registry:"
+          echo "$TOPICS"
+          echo "=========================================="

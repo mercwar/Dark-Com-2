@@ -11,11 +11,15 @@
 
 
 # ✨ Joe Tron's Dark-Com-2 WEB BROWSER 💎🔥
+###### Now written in pure C !
+- Same copy of the browser, with a diffferent source extension
+- Just run Dark-Com-2-c.bat and it will compile from main.c instead of main.cpp
+- 
 - Compiled with the Official 100% FREE MSVC Build Tools - [Download](https://aka.ms/vs/17/release/vs_BuildTools.exe) From Microsoft
-- CPP/EXE Version Dark-Com (Single File)
+- c/CPP/EXE Version Dark-Com (Single File)
 - True Native MS Windows Runtime (Win11 Ready)
 - Official Mercwar Open Source Wrapper with Shell Installer
-- CVBGOD's CPP file for the Official WebView2 Microsoft Device 
+- CVBGOD's c/CPP file for the Official WebView2 Microsoft Device 
 - Low cost CPU/RAM for Fast Browsing
 - Navigation bar for regular surfing
 - No Java/VB runtimes needed
@@ -51,7 +55,7 @@ Requirements for Developers:
 
 # ✨ Dark-Com-2 Stargate
 ## 1. Overview 💎🔥
-Dark-Com-2 isn’t just another browser wrapper — it’s a **Win32-native beast**. Built directly on Microsoft WebView2 C++ controller architecture, it bypasses bloated runtimes and talks straight to the OS with hardware-accelerated messaging.  
+Dark-Com-2 isn’t just another browser wrapper — it’s a **Win32-native beast**. Built directly on Microsoft WebView2 c/C++ controller architecture, it bypasses bloated runtimes and talks straight to the OS with hardware-accelerated messaging.  
 
 Think of it as your **personal command gateway**: lean, fast, and unapologetically raw.
 
@@ -88,6 +92,7 @@ Before you dive in, make sure you’ve got:
 │
 ├── 📁 src/                     <-- Source code
 │   ├── 📄 main.cpp             <-- Core Win32 + WebView2 engine
+│   ├── 📄 main.c             <-- Core Win32 + WebView2 engine
 │   └── 📄 resource.rc          <-- Resource script
 │
 ├── 📁 include/                 <-- Header files
@@ -107,6 +112,7 @@ Before you dive in, make sure you’ve got:
 │
 ├── 📁 scripts/                 <-- Batch installers & utilities
 │   ├── 📄 Dark-Com-2.bat
+│   ├── 📄 Dark-Com-2-c.bat
 │   ├── 📄 Install_MS_WebView2.bat
 │   ├── 📄 net-install.bat
 │   └── 📄 nuget.exe
@@ -250,11 +256,11 @@ exit /b 0
 ---
 
 ## 🎤 Cyborg Challenge
-All in 1 .cpp file !
+All in 1 c/cpp file !
 
 - Clone the repo.  
 - Run the batch files to install the enviorment.  
-- Compile the cpp file
+- Compile the c/cpp file
 - Run the exe
 - Then ...
 - Get ready for AVIS!

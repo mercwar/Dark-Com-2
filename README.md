@@ -16,10 +16,10 @@
 - Just run Dark-Com-2-c.bat and it will compile from main.c instead of main.cpp
 - 
 - Compiled with the Official 100% FREE MSVC Build Tools - [Download](https://aka.ms/vs/17/release/vs_BuildTools.exe) From Microsoft
-- c/CPP/EXE Version Dark-Com (Single File)
+- C/CPP/EXE Version Dark-Com (Single File)
 - True Native MS Windows Runtime (Win11 Ready)
 - Official Mercwar Open Source Wrapper with Shell Installer
-- CVBGOD's c/CPP file for the Official WebView2 Microsoft Device 
+- CVBGOD's C/CPP file for the Official WebView2 Microsoft Device 
 - Low cost CPU/RAM for Fast Browsing
 - Navigation bar for regular surfing
 - No Java/VB runtimes needed
@@ -55,7 +55,7 @@ Requirements for Developers:
 
 # ✨ Dark-Com-2 Stargate
 ## 1. Overview 💎🔥
-Dark-Com-2 isn’t just another browser wrapper — it’s a **Win32-native beast**. Built directly on Microsoft WebView2 c/C++ controller architecture, it bypasses bloated runtimes and talks straight to the OS with hardware-accelerated messaging.  
+Dark-Com-2 isn’t just another browser wrapper — it’s a **Win32-native beast**. Built directly on Microsoft WebView2 C/C++ controller architecture, it bypasses bloated runtimes and talks straight to the OS with hardware-accelerated messaging.  
 
 Think of it as your **personal command gateway**: lean, fast, and unapologetically raw.
 
@@ -167,7 +167,97 @@ git clone https://github.com/mercwar/Dark-Com-2.git
 
 👉 **Step 2: Run the one-click batch file**  
 This script clones the repo **and** installs the VC++ Redistributable automatically.  
+VC:
+```bat
+@echo off
+echo ============================================
+echo  AIFVS-ARTIFACT: Dark-Com-2.bat [C EDITION]
+echo  Auto MSVC env + Compile WebView2 View Engine
+echo ============================================
 
+:: Force execution context to lock directly onto the script's home folder location
+cd /d "%~dp0"
+
+:: Flush previous operational application states and runtime cached objects
+if exist Dark-Com-2.exe del /f /q Dark-Com-2.exe
+if exist main.obj del /f /q main.obj
+if exist resource.res del /f /q resource.res
+
+:: Initialize local compiler dependencies if environment context paths are blank
+if not defined VCINSTALLDIR (
+    if exist "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" (
+        call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" x64
+    ) else if exist "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" (
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64
+    ) else (
+        echo ERROR: Visual Studio vcvarsall.bat environment initializer script not found.
+        goto end
+    )
+)
+
+:: Validate package folder structure before trying to target compilation paths
+if not exist "packages\Microsoft.Web.WebView2" (
+    echo ERROR: WebView2 NuGet dependency package is missing in 'packages\' directory.
+    goto end
+)
+
+:: Verify presence of the base input main.c source architecture
+if not exist main.c (
+    echo ERROR: Base compilation target file 'main.c' is missing!
+    goto end
+)
+
+echo Compiling embedded binary resource layout assets...
+set "RES_FILE="
+if exist favi-con.ico (
+    if exist resource.rc (
+        rc.exe resource.rc
+        if exist resource.res set "RES_FILE=resource.res"
+    ) else (
+        echo WARNING: resource.rc missing. Skipping resource compilation step...
+    )
+) else (
+    echo WARNING: favi-con.ico was missing! Skipping embedding step...
+)
+
+echo Building application window layer: Dark-Com-2.exe
+
+:: Compile pure C code, moving the resource file down to the link stage parameters
+cl ^
+  main.c ^
+  /DUNICODE /D_UNICODE /DCINTERFACE ^
+  /I"packages\Microsoft.Web.WebView2\build\native\include" ^
+  /Fe"Dark-Com-2.exe" ^
+  /TC ^
+  /link ^
+  %RES_FILE% ^
+  /LIBPATH:"packages\Microsoft.Web.WebView2\build\native\x64" ^
+  WebView2Loader.dll.lib user32.lib ole32.lib gdi32.lib
+
+if exist Dark-Com-2.exe (
+    echo.
+    echo Build Complete: Dark-Com-2.exe
+    echo --------------------------------------------
+    
+    :: Safe extraction transfer routing of the required user engine system loader artifact
+    if exist "packages\Microsoft.Web.WebView2\build\native\x64\WebView2Loader.dll" (
+        copy /Y "packages\Microsoft.Web.WebView2\build\native\x64\WebView2Loader.dll" "WebView2Loader.dll" >nul
+    )
+    
+    echo Launching Embedded Form Window Instance...
+    Dark-Com-2.exe
+) else (
+    echo.
+    echo --------------------------------------------
+    echo ERROR: Build failed. Verify your compiler or asset paths.
+    echo --------------------------------------------
+)
+
+:end
+pause
+
+```
+VC++
 ```bat
 :: ============================================
 :: AIFVS-ARTIFACT
@@ -256,11 +346,11 @@ exit /b 0
 ---
 
 ## 🎤 Cyborg Challenge
-All in 1 c/cpp file !
+All in 1 C/CPP file !
 
 - Clone the repo.  
 - Run the batch files to install the enviorment.  
-- Compile the c/cpp file
+- Compile the C/cpp file
 - Run the exe
 - Then ...
 - Get ready for AVIS!

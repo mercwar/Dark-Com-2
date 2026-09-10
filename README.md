@@ -42,7 +42,7 @@ Requirements for Developers:
 - Dark-Com-2.exe will auto Load
 - There is a copy of WebView2.h in the clone, Install_MS_WebView2 does this for you
   
-## 🎤 All in 1 .cpp file, Your Done!
+## 🎤 All in 1 C/CPP file, Your Done!
 
 
 

@@ -92,7 +92,7 @@ Before you dive in, make sure you’ve got:
 │
 ├── 📁 src/                     <-- Source code
 │   ├── 📄 main.cpp             <-- Core Win32 + WebView2 engine
-│   ├── 📄 main.c             <-- Core Win32 + WebView2 engine
+│   ├── 📄 main.c               <-- Core Win32 + WebView2 engine
 │   └── 📄 resource.rc          <-- Resource script
 │
 ├── 📁 include/                 <-- Header files

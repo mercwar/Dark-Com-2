@@ -14,7 +14,6 @@
 ###### Now written in pure C !
 - Same copy of the browser, with a diffferent source extension
 - Just run Dark-Com-2-c.bat and it will compile from main.c instead of main.cpp
-- 
 - Compiled with the Official 100% FREE MSVC Build Tools - [Download](https://aka.ms/vs/17/release/vs_BuildTools.exe) From Microsoft
 - C/CPP/EXE Version Dark-Com (Single File)
 - True Native MS Windows Runtime (Win11 Ready)

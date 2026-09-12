@@ -16,6 +16,9 @@
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/nuget.exe</loc>
   </url>
   <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/Dark-Com-2-cpp.zip</loc>
+  </url>
+  <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/include/cvbgod</loc>
   </url>
   <url>
@@ -38,6 +41,9 @@
   </url>
   <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/fire-site.sh</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/push_all.bat</loc>
   </url>
   <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/Install_MS_WebView2.bat</loc>

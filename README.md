@@ -72,6 +72,7 @@ Before you dive in, make sure you’ve got:
 - **VC++ 2015–2022 Redistributable** (x64).  
 
 ---
+
 ![dc](images/ChatGPT%20Image%20Sep%204%2C%202026%2C%2006_42_27%20AM.png)
 
 ## 4. Installation & Setup 💎🔥
@@ -79,7 +80,6 @@ Before you dive in, make sure you’ve got:
 2. Run `Dark-Com-2.bat` → compiles everything into a standalone binary.  
 
 ---
-
 
 
 ## 5. File Infrastructure 💎🔥
@@ -120,7 +120,12 @@ Before you dive in, make sure you’ve got:
 ---
 
 ## 6. 🚀 Summary
+
 Dark-Com-2 is designed for **instant deployment**. No configs, no headaches. Just run the batch files and watch it build itself into a glowing executable.
+
+---
+
+![dc](images/stargate.png)
 
 ---
 
@@ -230,7 +235,9 @@ pause
 exit /b 0
 
 ```
+
 ![dc](images/ChatGPT%20Image%20Sep%204%2C%202026%2C%2005_12_02%20AM.png)
+
 ---
 
 ## 🎤 Cyborg Challenge

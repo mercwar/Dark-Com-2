@@ -83,7 +83,7 @@ Before you dive in, make sure you’ve got:
 
 ---
 
-
+![dc](images/stargate.png)
 
 ## 5. File Infrastructure 💎🔥
 ```text

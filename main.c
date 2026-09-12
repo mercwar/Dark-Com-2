@@ -156,7 +156,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             g_hWndParent = hWnd;
             HINSTANCE hInstance = ((LPCREATESTRUCT)lParam)->hInstance;
             
-            g_hWndUrlEdit = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"https://google.com",
+            g_hWndUrlEdit = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"https://mercwar01.byethost3.com",
                 WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
                 0, 0, 0, 0, hWnd, (HMENU)IDC_URL_EDIT, hInstance, NULL);
             
@@ -205,9 +205,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     wcex.hCursor        = LoadCursor(NULL, IDC_ARROW);
     wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW + 1);
     
+    // ADDED: Load and assign the custom application icons
+    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APP_ICON));
+    wcex.hIconSm        = (HICON)LoadImage(hInstance, MAKEINTRESOURCE(IDI_APP_ICON), IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR);
+    
     RegisterClassExW(&wcex);
     
-    HWND hWnd = CreateWindowW(L"WebView2BrowserClass", L"AVIS Integrated Window Browser", 
+    HWND hWnd = CreateWindowW(L"WebView2BrowserClass", L"Stargate Dark-Com v2 ", 
         WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 1024, 768, 
         NULL, NULL, hInstance, NULL);
         

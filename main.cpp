@@ -76,7 +76,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
             HINSTANCE hInst = ((LPCREATESTRUCT)lParam)->hInstance;
 
             // 1. Create the Address Input Bar (Text box)
-            g_hWndUrlEdit = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"https://google.com",
+            g_hWndUrlEdit = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"https://mercwar01.byethost3.com",
                 WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL,
                 0, 0, 0, 0, hWnd, (HMENU)IDC_URL_EDIT, hInst, NULL);
 
@@ -127,7 +127,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     RegisterClassExW(&wcex);
 
     // Update the window title text to Dark-Com-2
-    g_hWndParent = CreateWindowExW(0, L"AVIS_FORM_BROWSER", L"Joe Tron's Dark-Com-2", 
+    g_hWndParent = CreateWindowExW(0, L"AVIS_FORM_BROWSER", L"Stargate Dark-Com v2", 
                                    WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 
                                    1280, 1024, NULL, NULL, hInstance, NULL);
 

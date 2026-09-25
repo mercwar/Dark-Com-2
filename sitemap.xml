@@ -4,22 +4,19 @@
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/resource.rc</loc>
   </url>
   <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/WebView2Loader.dll</loc>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/.github/workflows/fire-site.yml</loc>
   </url>
   <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/Dark-Com-2.bat</loc>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/.github/workflows/toipics_old.yml</loc>
   </url>
   <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/Dark-Com-2-c.zip</loc>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/.github/workflows/topic.yml</loc>
   </url>
   <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/nuget.exe</loc>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/LICENSE</loc>
   </url>
   <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/Dark-Com-2-cpp.zip</loc>
-  </url>
-  <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/include/cvbgod</loc>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/fire-site.sh</loc>
   </url>
   <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/include/WebView2EnvironmentOptions.h</loc>
@@ -28,31 +25,52 @@
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/include/WebView2.h</loc>
   </url>
   <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/main.cpp</loc>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/include/cvbgod</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/Dark-Com-2-cpp.zip</loc>
   </url>
   <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/vc_redist.x64.exe</loc>
   </url>
   <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/show_com.bat</loc>
-  </url>
-  <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/Dark-Com-2-c.bat</loc>
   </url>
   <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/fire-site.sh</loc>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/index.html</loc>
   </url>
   <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/push_all.bat</loc>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/favi-con.ico</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/net-install.bat</loc>
   </url>
   <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/Install_MS_WebView2.bat</loc>
   </url>
   <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/sitemap.xml</loc>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/push_all.bat</loc>
   </url>
   <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/images/cvbgod</loc>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/Dark-Com-2.exe</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/main.cpp</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/resource.res</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/WebView2.h</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/Dark-Com-2-c.zip</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/google77a4b19e8f99751c.html</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/README.md</loc>
   </url>
   <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/images/ChatGPT%20Image%20Sep%204,%202026,%2005_12_02%20AM.png</loc>
@@ -61,25 +79,49 @@
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/images/ChatGPT%20Image%20Sep%204,%202026,%2006_51_00%20AM.png</loc>
   </url>
   <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/images/stargate.png</loc>
+  </url>
+  <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/images/ChatGPT%20Image%20Sep%204,%202026,%2006_51_26%20AM.png</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/images/cvbgod</loc>
   </url>
   <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/images/ChatGPT%20Image%20Sep%204,%202026,%2006_42_27%20AM.png</loc>
   </url>
   <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/images/stargate.png</loc>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/packages/readme.md</loc>
   </url>
   <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/logic/universal/v1/cyhy/EditorIntegration.java</loc>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/sitemap.xml</loc>
   </url>
   <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/logic/universal/v1/cyhy/syntax_parser.php</loc>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/main.obj</loc>
   </url>
   <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/logic/universal/v1/cyhy/comments.fl</loc>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/WebView2Loader.dll</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/nuget.exe</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/show_com.bat</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/Dark-Com-2.bat</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/logic/universal/v1/manifest.json</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/logic/universal/v1/environment_state.fl</loc>
   </url>
   <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/logic/universal/v1/tools/manifest.json</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/logic/universal/v1/tools/bridge.php</loc>
   </url>
   <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/logic/universal/v1/tools/AIBridge.java</loc>
@@ -94,69 +136,27 @@
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/logic/universal/v1/tools/bridge.js</loc>
   </url>
   <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/logic/universal/v1/tools/bridge.php</loc>
-  </url>
-  <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/logic/universal/v1/manifest.json</loc>
-  </url>
-  <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/logic/universal/v1/robot_directives.fl</loc>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/logic/universal/v1/universal_hook.fl</loc>
   </url>
   <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/logic/universal/v1/RobotValidator.java</loc>
   </url>
   <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/logic/universal/v1/universal_hook.fl</loc>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/logic/universal/v1/cyhy/syntax_parser.php</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/logic/universal/v1/cyhy/EditorIntegration.java</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/logic/universal/v1/cyhy/comments.fl</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/logic/universal/v1/robot_directives.fl</loc>
   </url>
   <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/logic/universal/v1/README.md</loc>
   </url>
   <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/logic/universal/v1/environment_state.fl</loc>
-  </url>
-  <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/index.html</loc>
-  </url>
-  <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/main.c</loc>
-  </url>
-  <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/resource.res</loc>
-  </url>
-  <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/packages/readme.md</loc>
-  </url>
-  <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/Dark-Com-2.exe</loc>
-  </url>
-  <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/README.md</loc>
-  </url>
-  <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/google77a4b19e8f99751c.html</loc>
-  </url>
-  <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/main.obj</loc>
-  </url>
-  <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/favi-con.ico</loc>
-  </url>
-  <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/net-install.bat</loc>
-  </url>
-  <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/.github/workflows/topic.yml</loc>
-  </url>
-  <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/.github/workflows/fire-site.yml</loc>
-  </url>
-  <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/.github/workflows/toipics_old.yml</loc>
-  </url>
-  <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/LICENSE</loc>
-  </url>
-  <url>
-    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/WebView2.h</loc>
   </url>
 </urlset>

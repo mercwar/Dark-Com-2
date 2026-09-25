@@ -241,7 +241,7 @@ exit /b 0
 ---
 
 ## 🎤 Cyborg Challenge
-All in 1 .cpp file !
+All in 1 c. or .cpp file !
 
 - Clone the repo.  
 - Run the batch files to install the enviorment.  

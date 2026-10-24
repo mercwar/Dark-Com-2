@@ -1,13 +1,16 @@
 [CmdletBinding()]
 param()
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop
 
-# Clear screen and set up clean header
+# Enable ANSI escape processing in modern Windows terminals
+$e = [char]27
+$ESC = "$e"
+
 Clear-Host
-Write-Host "=====================================================================" -ForegroundColor Cyan
-Write-Host " Dark-Com-2 Engine Global PowerShell Installer" -ForegroundColor Cyan
-Write-Host "=====================================================================" -ForegroundColor Cyan
+Write-Host "$ESC[96m=====================================================================$ESC[0m"
+Write-Host "$ESC[96m Dark-Com-2 Engine Global PowerShell Installer                      $ESC[0m"
+Write-Host "$ESC[96m=====================================================================$ESC[0m"
 Write-Host ""
 
 try {
@@ -17,13 +20,12 @@ try {
 $TargetModuleRoot = Join-Path $HOME "Documents\DarkComEngine"
 
 if (-not (Test-Path $TargetModuleRoot)) {
-    Write-Host "[INFO] Creating destination infrastructure layout..." -ForegroundColor Yellow
+    Write-Host "$ESC[33m[INFO] Creating destination infrastructure layout...$ESC[0m"
     New-Item -ItemType Directory -Path $TargetModuleRoot -Force | Out-Null
 }
 
-# Change to the installation directory FIRST before downloading/running anything
 Set-Location $TargetModuleRoot
-Write-Host "[INFO] Working Directory set to: $(Get-Location)" -ForegroundColor DarkGray
+Write-Host "$ESC[90m[INFO] Working Directory set to: $(Get-Location)$ESC[0m"
 Write-Host ""
 
 $FilesToDownload = @(
@@ -54,7 +56,7 @@ $FilesToDownload = @(
     }
 )
 
-Write-Host "[INFO] Fetching core engine deployment layers from GitHub..." -ForegroundColor Cyan
+Write-Host "$ESC[96m[INFO] Fetching core engine deployment layers from GitHub...$ESC[0m"
 Write-Host ""
 
 $FailedFiles = @()
@@ -65,14 +67,16 @@ foreach ($File in $FilesToDownload) {
     $CurrentIndex++
     $Destination = Join-Path $TargetModuleRoot $File.Name
 
-    # Render custom sleek progress bar
+    # Render modern smooth progress bar using ANSI colors
     $Width = 25
     $Percent = [Math]::Floor(($CurrentIndex / $TotalFiles) * 100)
     $Completed = [Math]::Floor(($Width * $Percent) / 100)
     $Remaining = $Width - $Completed
-    $Bar = ('█' * $Completed) + ('░' * $Remaining)
     
-    Write-Host -NoNewline "`r  [$Bar] $Percent% ($CurrentIndex/$TotalFiles) Downloading: $($File.Name)...                    "
+    $BarFilled = "$ESC[96m" + ('█' * $Completed) + "$ESC[0m"
+    $BarEmpty = "$ESC[90m" + ('░' * $Remaining) + "$ESC[0m"
+    
+    [Console]::Write("`r  [$BarFilled$BarEmpty] $ESC[93m$Percent%%$ESC[0m ($CurrentIndex/$TotalFiles) Downloading: $ESC[97m$($File.Name)$ESC[0m                    ")
 
     try {
         Invoke-WebRequest `
@@ -93,7 +97,7 @@ foreach ($File in $FilesToDownload) {
         }
     }
     catch {
-        Write-Host ""
+        [Console]::Write("`n")
         Write-Warning "[WARN] Failed to download $($File.Name): $($_.Exception.Message)"
         if ($File.Required) {
             $FailedFiles += $File.Name
@@ -101,9 +105,8 @@ foreach ($File in $FilesToDownload) {
     }
 }
 
-# Finish progress line neatly
 Write-Host "`n"
-Write-Host "=====================================================================" -ForegroundColor DarkGray
+Write-Host "$ESC[90m=====================================================================$ESC[0m"
 
 if ($FailedFiles.Count -gt 0) {
     Write-Error "[FATAL] Missing required files: $($FailedFiles -join ', ')"
@@ -113,14 +116,14 @@ if ($FailedFiles.Count -gt 0) {
 $ScriptPath = ".\darkcom2.ps1"
 $BatPath = ".\darkcom2.bat"
 
-Write-Host "[SUCCESS] Dark-Com-2 Engine installed successfully!" -ForegroundColor Green
-Write-Host "Location: $(Get-Location)" -ForegroundColor DarkGray
+Write-Host "$ESC[92m[SUCCESS] Dark-Com-2 Engine installed successfully!$ESC[0m"
+Write-Host "$ESC[90mLocation: $(Get-Location)$ESC[0m"
 Write-Host ""
 
 $response = Read-Host "Would you like to run Eclipse now? (Y/N)"
 
 if ($response -match '^[Nn]') {
-    Write-Host "[INFO] Attempting to launch darkcom2.ps1 from install directory..." -ForegroundColor Yellow
+    Write-Host "$ESC[33m[INFO] Attempting to launch darkcom2.ps1 from install directory...$ESC[0m"
     try {
         & powershell.exe -ExecutionPolicy Bypass -File "$ScriptPath"
     }
@@ -129,6 +132,6 @@ if ($response -match '^[Nn]') {
         & cmd.exe /c "$BatPath"
     }
 } else {
-    Write-Host "[INFO] Launching darkcom2.bat from install directory..." -ForegroundColor Yellow
+    Write-Host "$ESC[33m[INFO] Launching darkcom2.bat from install directory...$ESC[0m"
     & cmd.exe /c "$BatPath"
 }

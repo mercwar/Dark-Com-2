@@ -94,16 +94,15 @@ if (-not (Test-Path $ScriptPath)) {
     return
 }
 
-Write-Host "[INFO] Loading darkcom2.ps1 interface into current PowerShell session..." -ForegroundColor Yellow
-
-try {
-    . $ScriptPath
-
-    Write-Host ""
-    Write-Host "[SUCCESS] Dark-Com-2 Engine Pipeline successfully loaded!" -ForegroundColor Green
-    Write-Host "Directory Path: $TargetModuleRoot" -ForegroundColor White
-    Write-Host ""
-}
-catch {
-    Write-Error "[FATAL] Failed to execute script path context layout: $($_.Exception.Message)"
-}
+Write-Host ""
+Write-Host "[SUCCESS] Dark-Com-2 Engine installed successfully to: $TargetModuleRoot" -ForegroundColor Green
+Write-Host ""
+Write-Host "=====================================================" -ForegroundColor Yellow
+Write-Host " IMPORTANT: PowerShell script execution may be disabled." -ForegroundColor Yellow
+Write-Host " If running scripts is blocked, execute this command first:" -ForegroundColor White
+Write-Host "   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process" -ForegroundColor Cyan
+Write-Host ""
+Write-Host " To launch the interface, run:" -ForegroundColor White
+Write-Host "   & `"$ScriptPath`"" -ForegroundColor Cyan
+Write-Host "=====================================================" -ForegroundColor Yellow
+Write-Host ""

@@ -8,7 +8,8 @@ Write-Host " Dark-Com-2 Engine Module Global PowerShell Installer" -ForegroundCo
 Write-Host "=====================================================" -ForegroundColor Cyan
 
 try {
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    [Net.ServicePointManager]::SecurityProtocol = `
+        [Net.SecurityProtocolType]::Tls12
 } catch {}
 
 $TargetModuleRoot = Join-Path $HOME "Documents\WindowsPowerShell\Modules\DarkCurl"
@@ -28,14 +29,20 @@ $FilesToDownload = @(
         Name = "WebView2Loader.dll"
         Url  = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/WebView2Loader.dll"
         Required = $true
+    },
+    @{
+        Name = "DarkCurl.psm1"
+        Url  = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/DarkCurl.psm1"
+        Required = $true
     }
 )
 
-Write-Host "[INFO] Fetching core engine binaries from GitHub..." -ForegroundColor Yellow
+Write-Host "[INFO] Fetching core engine deployment layers from GitHub..." -ForegroundColor Yellow
 
 $FailedFiles = @()
 
 foreach ($File in $FilesToDownload) {
+
     $Destination = Join-Path $TargetModuleRoot $File.Name
 
     try {
@@ -53,6 +60,7 @@ foreach ($File in $FilesToDownload) {
         }
 
         $FileSize = (Get-Item $Destination).Length
+
         if ($FileSize -le 0) {
             throw "Downloaded file is empty."
         }
@@ -74,87 +82,25 @@ if ($FailedFiles.Count -gt 0) {
     return
 }
 
-# Generate DarkCurl.psm1 locally to avoid remote module parsing issues
-Write-Host "[INFO] Generating local module wrapper script..." -ForegroundColor Yellow
-$ModuleScriptContent = @'
-# ====================================================================
-# AIFVS-MODULE: DarkCurl.psm1
-# PowerShell Command-Line Wrapper for DarkComHeadless WebView2 Engine
-# ====================================================================
-
-$NativeDllPath = $PSScriptRoot
-if (Test-Path $NativeDllPath) {
-    Add-Type -TypeDefinition @"
-    using System;
-    using System.Runtime.InteropServices;
-    public class DarkKernel32 {
-        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        public static extern bool SetDllDirectory(string lpPathName);
-    }
-"@ -ErrorAction SilentlyContinue
-    [DarkKernel32]::SetDllDirectory($NativeDllPath) | Out-Null
-}
-
-$NativeBridgeCode = @"
-using System;
-using System.Runtime.InteropServices;
-
-public class DarkComEngine {
-    [DllImport("DarkComHeadless.dll", CharSet = CharSet.Unicode, CallingConvention = CallingConvention.StdCall)]
-    public static extern IntPtr RunHeadlessRequest(string url, string postData);
-}
-"@
-
-if (-not ([System.Management.Automation.PSTypeName]'DarkComEngine').Type) {
-    Add-Type -TypeDefinition $NativeBridgeCode -ErrorAction SilentlyContinue
-}
-
-function Invoke-DarkCurl {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory = $true, Position = 0, HelpMessage = "Target URL endpoint.")]
-        [string]$Url,
-
-        [Parameter(Mandatory = $false, Position = 1, HelpMessage = "Optional raw data payload for POST.")]
-        [string]$Data = $null
-    )
-
-    process {
-        try {
-            $ResultBufferPtr = [DarkComEngine]::RunHeadlessRequest($Url, $Data)
-
-            if ($ResultBufferPtr -ne [IntPtr]::Zero) {
-                $ExtractedStringOutput = [System.Runtime.InteropServices.Marshal]::PtrToStringAnsi($ResultBufferPtr)
-                return $ExtractedStringOutput
-            } else {
-                Write-Error "[ERROR] Headless execution returned a null buffer pointer."
-            }
-        }
-        catch {
-            Write-Error "[FATAL] Interop transaction failed: $_"
-        }
-    }
-}
-
-Export-ModuleMember -Function Invoke-DarkCurl
-Set-Alias -Name dcurl -Value Invoke-DarkCurl -Force
-'@
-
 $ModulePath = Join-Path $TargetModuleRoot "DarkCurl.psm1"
-Set-Content -Path $ModulePath -Value $ModuleScriptContent -Encoding UTF8
 
-Write-Host "[INFO] Registering module into current session..." -ForegroundColor Yellow
+if (-not (Test-Path $ModulePath)) {
+    Write-Error "[FATAL] DarkCurl.psm1 was not installed."
+    return
+}
+
+Write-Host "[INFO] Registering module variables into current terminal profile parameters..." -ForegroundColor Yellow
 
 try {
     Import-Module $ModulePath -Force -ErrorAction Stop
 
     Write-Host ""
-    Write-Host "[SUCCESS] DarkCurl Engine Pipeline Successfully Installed & Registered!" -ForegroundColor Green
+    Write-Host "[SUCCESS] DarkCurl Engine Pipeline Registered Natively into your PowerShell environment!" -ForegroundColor Green
     Write-Host "Usage Command: dcurl <URL>" -ForegroundColor White
     Write-Host "Usage Example: dcurl 'https://httpbin.org'" -ForegroundColor White
     Write-Host "Usage POST:    dcurl 'https://httpbin.org/post' 'foo=bar&baz=qux'" -ForegroundColor White
     Write-Host ""
 }
 catch {
-    Write-Error "[FATAL] Failed to initialize module: $($_.Exception.Message)"
+    Write-Error "[FATAL] Failed to initialize module path context layout natively: $($_.Exception.Message)"
 }

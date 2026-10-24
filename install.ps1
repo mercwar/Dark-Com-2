@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param()
 
-$ErrorActionPreference = "Stop
+$ErrorActionPreference = "Stop"
 
 # Enable ANSI escape processing in modern Windows terminals
 $e = [char]27

@@ -1,60 +1,193 @@
 [CmdletBinding()]
 param()
 
+$ErrorActionPreference = "Stop"
+
 Write-Host "=====================================================" -ForegroundColor Cyan
 Write-Host " Dark-Com-2 Engine Module Global PowerShell Installer" -ForegroundColor Cyan
 Write-Host "=====================================================" -ForegroundColor Cyan
 
-# 1. Target your explicit static raw storage distribution path
+# Force modern TLS
+try {
+    [Net.ServicePointManager]::SecurityProtocol = `
+        [Net.SecurityProtocolType]::Tls12
+}
+catch {}
+
 $BaseUri = "https://raw.githubusercontent.com/mercwar/Dark-Com-2/main/"
 
-# 2. Establish target module installation folder
 $TargetModuleRoot = Join-Path $HOME "Documents\WindowsPowerShell\Modules\DarkCurl"
-if (-not (Test-Path $TargetModuleRoot)) {
-    Write-Host "[INFO] Creating destination module infrastructure layout..." -ForegroundColor Yellow
-    New-Item -ItemType Directory -Path $TargetModuleRoot -Force | Out-Null
+
+if (-not (Test-Path $TargetModuleRoot))
+{
+    Write-Host "[INFO] Creating module directory..." -ForegroundColor Yellow
+
+    New-Item `
+        -ItemType Directory `
+        -Path $TargetModuleRoot `
+        -Force | Out-Null
 }
 
-# 3. Enumerate target source components
+# Mark files as required/optional
 $FilesToDownload = @(
-    "DarkComHeadless.dll",
-    "WebView2Loader.dll",
-    "DarkCurl.psm1"
+    @{
+        Name = "DarkComHeadless.dll"
+        Required = $false
+    },
+    @{
+        Name = "WebView2Loader.dll"
+        Required = $true
+    },
+    @{
+        Name = "DarkCurl.psm1"
+        Required = $true
+    }
 )
 
-# 4. Stream application binaries directly from the raw GitHub context layout
-Write-Host "[INFO] Fetching core engine deployment layers from GitHub..." -ForegroundColor Yellow
-foreach ($FileName in $FilesToDownload) {
-    # Append a randomized cache buster query string to bypass stale edge server caching
-    $SourceUrl   = "$BaseUri$FileName?cb=$(Get-Random)"
+function Test-RemoteFile
+{
+    param(
+        [string]$Url
+    )
+
+    try
+    {
+        $Response = Invoke-WebRequest `
+            -Uri $Url `
+            -Method Head `
+            -UseBasicParsing `
+            -TimeoutSec 15
+
+        return ($Response.StatusCode -ge 200 -and $Response.StatusCode -lt 300)
+    }
+    catch
+    {
+        return $false
+    }
+}
+
+function Get-SafeFile
+{
+    param(
+        [string]$Url,
+        [string]$Destination
+    )
+
+    try
+    {
+        Invoke-WebRequest `
+            -Uri $Url `
+            -OutFile $Destination `
+            -UseBasicParsing `
+            -TimeoutSec 30 `
+            -ErrorAction Stop
+
+        if (-not (Test-Path $Destination))
+        {
+            throw "File was not created."
+        }
+
+        $Size = (Get-Item $Destination).Length
+
+        if ($Size -eq 0)
+        {
+            throw "Downloaded file is empty."
+        }
+
+        return $true
+    }
+    catch
+    {
+        Write-Warning $_.Exception.Message
+        return $false
+    }
+}
+
+Write-Host ""
+Write-Host "[INFO] Fetching deployment files..." -ForegroundColor Yellow
+
+$Failures = @()
+
+foreach ($Entry in $FilesToDownload)
+{
+    $FileName = $Entry.Name
+    $Required = $Entry.Required
+
+    $Url = "$BaseUri$FileName"
+
     $Destination = Join-Path $TargetModuleRoot $FileName
 
-    try {
-        Write-Host " -> Downloading: $FileName" -ForegroundColor Gray
-        
-        # Invoke-WebRequest forces raw stream processing to ensure clean DLL alignment on disk
-        Invoke-WebRequest -Uri $SourceUrl -OutFile $Destination -TimeoutSec 30 -ErrorAction Stop
+    Write-Host " -> Processing: $FileName" -ForegroundColor Gray
+
+    if (-not (Test-RemoteFile $Url))
+    {
+        if ($Required)
+        {
+            Write-Host "    [ERROR] Remote file missing." -ForegroundColor Red
+            $Failures += $FileName
+        }
+        else
+        {
+            Write-Warning "Optional component not found: $FileName"
+        }
+
+        continue
     }
-    catch {
-        Write-Warning "[WARN] Failed to pull $FileName from raw endpoint. Checking local backup context..."
-        if (-not (Test-Path $Destination)) {
-            Write-Error "[FATAL] Critical file missing and remote acquisition failed: $FileName"
-            return
+
+    if (Get-SafeFile -Url $Url -Destination $Destination)
+    {
+        $SizeKB = [math]::Round(
+            ((Get-Item $Destination).Length / 1KB),
+            2
+        )
+
+        Write-Host "    [OK] Downloaded ($SizeKB KB)" -ForegroundColor Green
+    }
+    else
+    {
+        if ($Required)
+        {
+            $Failures += $FileName
         }
     }
 }
 
-# 5. Native session integration verification
-Write-Host "[INFO] Registering module variables into current terminal profile parameters..." -ForegroundColor Yellow
-try {
-    # Point directly to the newly dropped psm1 container layout context
-    Import-Module -Name (Join-Path $TargetModuleRoot "DarkCurl.psm1") -Force -ErrorAction Stop
-    
-    Write-Host "`n[SUCCESS] DarkCurl Engine Pipeline Registered Natively into your PowerShell environment!" -ForegroundColor Green
-    Write-Host "Usage Command: dcurl <URL>" -ForegroundColor White
-    Write-Host "Usage Example: dcurl 'https://httpbin.org'" -ForegroundColor White
-    Write-Host "Usage POST:    dcurl 'https://httpbin.org' 'foo=bar&baz=qux'`n" -ForegroundColor White
+if ($Failures.Count -gt 0)
+{
+    Write-Host ""
+    Write-Host "[FATAL] Required files missing:" -ForegroundColor Red
+
+    $Failures | ForEach-Object {
+        Write-Host " - $_" -ForegroundColor Red
+    }
+
+    return
 }
-catch {
-    Write-Error "[FATAL] Failed to initialize module path context layout natively: $_"
+
+$ModulePath = Join-Path $TargetModuleRoot "DarkCurl.psm1"
+
+if (-not (Test-Path $ModulePath))
+{
+    Write-Error "DarkCurl.psm1 not found after installation."
+    return
+}
+
+Write-Host ""
+Write-Host "[INFO] Loading module..." -ForegroundColor Yellow
+
+try
+{
+    Import-Module $ModulePath -Force -ErrorAction Stoprite-Host ""
+    Write-Host "[SUCCESS] DarkCurl installed successfully." -ForegroundColor Green
+    Write-Host ""
+    Write-Host "Module Location:" -ForegroundColor Cyan
+    Write-Host $TargetModuleRoot
+    Write-Host ""
+    Write-Host "Examples:" -ForegroundColor Cyan
+    Write-Host "dcurl 'https://httpbin.org'"
+    Write-Host "dcurl 'https://httpbin.org/post' 'foo=bar'"
+}
+catch
+{
+    Write-Error "Module import failed:`n$($_.Exception.Message)"
 }

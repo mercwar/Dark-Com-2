@@ -5,56 +5,54 @@ Write-Host "=====================================================" -ForegroundCo
 Write-Host " Dark-Com-2 Engine Module Global PowerShell Installer" -ForegroundColor Cyan
 Write-Host "=====================================================" -ForegroundColor Cyan
 
-# 1. Determine the actual execution context source path
-if ($MyInvocation.ScriptSourceLocation) {
-    # File is running locally as a script
-    $SourcePath = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
-} else {
-    # File is running via iex/in-memory (default fallback to the parent caller context or current path)
-    $SourcePath = (Get-Location).Path
-}
+# 1. Define repository target paths
+$RepoOwner  = "mercwar"
+$RepoName   = "Dark-Com-2"
+$Branch     = "main"
+$BaseUri    = "https://githubusercontent.com"
 
-# Fix system32 path hijacking if running in an elevated prompt via raw iex
-if ($SourcePath -eq "$env:SystemRoot\system32") {
-    Write-Warning "[WARN] Execution path resolved to system32. Attempting to locate assets in user space..."
-    $SourcePath = $PSScriptRoot
-    if (-not $SourcePath) { $SourcePath = $HOME }
-}
-
-$DllSourcePath    = Join-Path $SourcePath "DarkComHeadless.dll"
-$LoaderSourcePath = Join-Path $SourcePath "WebView2Loader.dll"
-$ModuleSourcePath = Join-Path $SourcePath "DarkCurl.psm1"
-
-# 2. Establish target module container repository
+# 2. Establish target module installation folder
 $TargetModuleRoot = Join-Path $HOME "Documents\WindowsPowerShell\Modules\DarkCurl"
 if (-not (Test-Path $TargetModuleRoot)) {
+    Write-Host "[INFO] Creating destination module infrastructure layout..." -ForegroundColor Yellow
     New-Item -ItemType Directory -Path $TargetModuleRoot -Force | Out-Null
 }
 
-# 3. Verify component existence before moving
-if (-not (Test-Path $DllSourcePath) -or -not (Test-Path $ModuleSourcePath)) {
-    Write-Error "[ERROR] Core deployment source assets missing."
-    Write-Error "Looked in: $SourcePath"
-    Write-Error "Ensure 'DarkComHeadless.dll' and 'DarkCurl.psm1' are placed inside that directory before running."
-    return
-}
+# 3. Enumerate layout target files
+$FilesToDownload = @(
+    "DarkComHeadless.dll",
+    "WebView2Loader.dll",
+    "DarkCurl.psm1"
+)
 
-# 4. Perform localized migration to user environment paths
-Write-Host "[INFO] Copying core engine execution binaries down into the profile registry directory..." -ForegroundColor Yellow
-Copy-Item -Path $DllSourcePath -Destination $TargetModuleRoot -Force
-Copy-Item -Path $ModuleSourcePath -Destination $TargetModuleRoot -Force
+# 4. Perform live download loop from GitHub storage endpoints
+Write-Host "[INFO] Fetching core engine deployment layers from GitHub..." -ForegroundColor Yellow
+foreach ($FileName in $FilesToDownload) {
+    $SourceUrl   = "$BaseUri/$FileName"
+    $Destination = Join-Path $TargetModuleRoot $FileName
 
-if (Test-Path $LoaderSourcePath) {
-    Copy-Item -Path $LoaderSourcePath -Destination $TargetModuleRoot -Force
+    try {
+        Write-Host " -> Downloading: $FileName" -ForegroundColor Gray
+        Invoke-RestMethod -Uri $SourceUrl -OutFile $Destination -ErrorAction Stop
+    }
+    catch {
+        Write-Warning "[WARN] Failed to pull $FileName from remote repository context. Checking local availability..."
+        if (-not (Test-Path $Destination)) {
+            Write-Error "[FATAL] Critical file missing and remote acquisition failed: $FileName"
+            return
+        }
+    }
 }
 
 # 5. Native session integration verification
 Write-Host "[INFO] Registering module variables into current terminal profile parameters..." -ForegroundColor Yellow
 try {
-    Import-Module -Name $TargetModuleRoot -Force -ErrorAction Stop
+    Import-Module -Name (Join-Path $TargetModuleRoot "DarkCurl.psm1") -Force -ErrorAction Stop
+    
     Write-Host "`n[SUCCESS] DarkCurl Engine Pipeline Registered Natively into your PowerShell environment!" -ForegroundColor Green
     Write-Host "Usage Command: dcurl <URL>" -ForegroundColor White
     Write-Host "Usage Example: dcurl 'https://httpbin.org'" -ForegroundColor White
+    Write-Host "Usage POST:    dcurl 'https://httpbin.org' 'foo=bar&baz=qux'`n" -ForegroundColor White
 }
 catch {
     Write-Error "[FATAL] Failed to initialize module path context layout natively: $_"

@@ -1,7 +1,11 @@
 @echo off
 setlocal DisableDelayedExpansion
 
-title DARK-COM-2 :: STATE BROKER CONTROL PANEL
+:: ============================================================================
+:: GATEWAY CONTROL CONSOLE :: STATE BROKER PANEL (AVIS-2026 PROTOCOL)
+:: ============================================================================
+title GATEWAY [ACTIVE] - ECLIPSE CONTROL PANEL
+color 0B
 cd /d "%~dp0"
 
 set "ENDPOINT=https://mercwar01.byethost3.com/darkcom2/index.php"
@@ -11,7 +15,7 @@ set "JSON_DATA="
 set "REQUEST_URL="
 set "REQUEST_METHOD="
 set "REQUEST_BODY="
-set "OUTFILE=%TEMP%\darkcom2_response_%RANDOM%.txt"
+set "OUTFILE=%TEMP%\gateway_response_%RANDOM%.txt"
 
 for /F %%A in ('echo prompt $E ^| cmd') do set "ESC=%%A"
 
@@ -20,6 +24,19 @@ reg add HKCU\Console /v VirtualTerminalLevel /t REG_DWORD /d 1 /f >nul 2>&1
 
 :: Ask supported modern terminals to use the desired dimensions.
 <nul set /p "=%ESC%[8;45;86t"
+
+:: ============================================================
+:: AUTO-TEST GATEWAY ON LOAD (READ APPLICATION PUBLIC)
+:: ============================================================
+cls
+echo.
+echo %ESC%[96m  [~] Starting Eclips version 1.0..%ESC%[0m
+echo.
+set "REQUEST_LABEL=AUTO-TEST: READ APPLICATION PUBLIC"
+set "REQUEST_URL=%ENDPOINT%?public=true&application=true&write=false"
+call :RUN_GET_SILENT
+echo %ESC%[92m  [+] The Eclipse Gateway is ALIVE, Loading... %ESC%[0m
+timeout /t 2 >nul
 
 cls
 goto MENU
@@ -31,7 +48,7 @@ goto MENU
 :: ============================================================
 
 :MENU
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$e=[char]27; $s=[int]$env:SELECTION; $c=$e+'[0m'; $f=New-Object 'System.Collections.Generic.List[string]'; $f.Add($e+'[H'+$e+'[2J'); $f.Add($e+'[96m  ============================================================================'+$c); $f.Add($e+'[96m   ____    _    ____  _  __  ____ ___  __  __ ____'+$c); $f.Add($e+'[96m   ^|  _ \\  / \\  ^|  _ \\^| ^|/ / / ___/ _ \\^|  \\/  ^|___ \\'+$c); $f.Add($e+'[96m   ^| ^| ^| / _ \\ ^| ^|_) ^| '' / ^| ^|   ^| ^| ^| ^|\\/^| ^| __) /'+$c); $f.Add($e+'[96m   ^| ^|_^| / ___ \\^|  _ <^| . \\ ^| ^|__^| ^|_^| ^|   ^| ^|/ __/ '+$c); $f.Add($e+'[96m   ^|____/_/   \\_\\_^| ^|\\_\\_\\_\\ \\____\\___/^|_^|  |_^|_____^|'+$c); $f.Add($e+'[96m  ============================================================================'+$c); $f.Add(''); $f.Add($e+'[93m             D A R K - C O M - 2'+$c); $f.Add($e+'[97m             STATE BROKER CONTROL PANEL'+$c); $f.Add($e+'[90m             SECURE DATA  ::  SESSION ROUTING'+$c); $f.Add(''); $f.Add($e+'[96m  [ SYSTEM ENDPOINT ]'+$c); $f.Add($e+'[90m  '+$env:ENDPOINT+$c); $f.Add(''); $f.Add($e+'[96m  --------------------------------------------------------------------------'+$c); $f.Add($e+'[93m  NAVIGATION'+$c+'  '+$e+'[97mUP / DOWN'+$c+'  '+$e+'[90mor'+$c+'  '+$e+'[97mW / S'+$c+'  '+$e+'[90m|'+$c+'  '+$e+'[97m1-9'+$c+'  '+$e+'[90mJUMP'+$c+'  '+$e+'[90m|'+$c+'  '+$e+'[97mENTER'+$c+'  '+$e+'[90mSELECT'+$c); $f.Add($e+'[96m  ==========================================================================v'+$c); $f.Add(''); $labels=@('READ  APPLICATION STATE  [PUBLIC]','WRITE APPLICATION STATE  [PUBLIC]','READ  APPLICATION STATE  [PRIVATE]','WRITE APPLICATION STATE  [PRIVATE]','READ  SESSION STATE        [PUBLIC]','WRITE SESSION STATE        [PUBLIC]','READ  SESSION STATE        [PRIVATE]','WRITE SESSION STATE        [PRIVATE]','EXIT CONTROL PANEL'); for($i=1;$i -le 9;$i++){if($i -eq 5){$f.Add('');$f.Add($e+'[90m  SESSION OPERATIONS'+$c)}; $p = if($i -eq $s) { '  >   ['+$i+']   ' } else { '      ['+$i+']   ' }; $line = ($p + $labels[$i-1]).PadRight(74); if($i -eq $s){$f.Add($e+'[30;103m'+$line+$c)}else{$f.Add($e+'[97m'+$line+$c)}}; $f.Add(''); $f.Add($e+'[96m  --------------------------------------------------------------------------'+$c); $f.Add($e+'[90m  HTTP ENGINE:'+ $c+' darkcom2.exe   '+$e+'[90mPROTOCOL:'+ $c+' curl-compatible options'); $f.Add($e+'[90m  STATUS:'+ $c+' Ready'); [Console]::Write($f -join [Environment]::NewLine)"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$e=[char]27; $s=[int]$env:SELECTION; $c=$e+'[0m'; $f=New-Object 'System.Collections.Generic.List[string]'; $f.Add($e+'[H'+$e+'[2J'); $f.Add($e+'[96m  ============================================================================'+$c); $f.Add($e+'[96m   ____    _    ____  _  __  ____ ___  __  __ ____'+$c); $f.Add($e+'[96m   ^|  _ \\  / \\   ^|  _ \\^| ^|/ / / ___/ _ \\^|  \\/  ^|___ \\'+$c); $f.Add($e+'[96m   ^| ^| ^| / _ \\  ^| ^|_) ^| '' / ^| ^|    ^| ^| ^| ^|\\/^| ^| __) /'+$c); $f.Add($e+'[96m   ^| ^|_^| / ___ \\^|  _ <^| . \\ ^| ^|__^| ^|_^| ^|    ^| ^|/ __/ '+$c); $f.Add($e+'[96m   ^|____/_/   \\_\\_^| ^|\\_\\_\\_\\ \\____\\___/^|_^|  ^|_____^|'+$c); $f.Add($e+'[96m  ============================================================================'+$c); $f.Add(''); $f.Add($e+'[93m             G A T E W A Y   C O N T R O L'+$c); $f.Add($e+'[97m             ECLIPSE version 1.0'+$c); $f.Add($e+'[90m             AVIS PROTOCOL  ::  SESSION ROUTING'+$c); $f.Add(''); $f.Add($e+'[96m  [ GATEWAY ENDPOINT ]'+$c); $f.Add($e+'[90m   '+$env:ENDPOINT+$c); $f.Add(''); $f.Add($e+'[96m  --------------------------------------------------------------------------'+$c); $f.Add($e+'[93m  NAVIGATION'+$c+'  '+$e+'[97mUP / DOWN'+$c+'  '+$e+'[90mor'+$c+'  '+$e+'[97mW / S'+$c+'  '+$e+'[90m|'+$c+'  '+$e+'[97m1-9'+$c+'  '+$e+'[90mJUMP'+$c+'  '+$e+'[90m|'+$c+'  '+$e+'[97mENTER'+$c+'  '+$e+'[90mSELECT'+$c); $f.Add($e+'[96m  ==========================================================================v'+$c); $f.Add(''); $labels=@('READ  APPLICATION STATE  [PUBLIC]','WRITE APPLICATION STATE  [PUBLIC]','READ  APPLICATION STATE  [PRIVATE]','WRITE APPLICATION STATE  [PRIVATE]','READ  SESSION STATE        [PUBLIC]','WRITE SESSION STATE        [PUBLIC]','READ  SESSION STATE        [PRIVATE]','WRITE SESSION STATE        [PRIVATE]','EXIT GATEWAY CONSOLE'); for($i=1;$i -le 9;$i++){if($i -eq 5){$f.Add('');$f.Add($e+'[90m  SESSION OPERATIONS'+$c)}; $p = if($i -eq $s) { '  >    ['+$i+']   ' } else { '     ['+$i+']   ' }; $line = ($p + $labels[$i-1]).PadRight(74); if($i -eq $s){$f.Add($e+'[30;103m'+$line+$c)}else{$f.Add($e+'[97m'+$line+$c)}}; $f.Add(''); $f.Add($e+'[96m  --------------------------------------------------------------------------'+$c); $f.Add($e+'[90m  HTTP ENGINE:'+ $c+' darkcom2.exe   '+$e+'[90mPROTOCOL:'+ $c+' curl-compatible options'); $f.Add($e+'[90m  STATUS:'+ $c+' Gateway Online'); [Console]::Write($f -join [Environment]::NewLine)"
 
 
 
@@ -99,6 +116,11 @@ darkcom2.exe "%REQUEST_URL%" -X GET > "%OUTFILE%" 2>&1
 set "REQUEST_RC=%ERRORLEVEL%"
 goto SHOW_RESPONSE
 
+:RUN_GET_SILENT
+darkcom2.exe "%REQUEST_URL%" -X GET > "%OUTFILE%" 2>&1
+set "REQUEST_RC=%ERRORLEVEL%"
+exit /b
+
 :RUN_POST
 call :SHOW_LOADING
 darkcom2.exe "%REQUEST_URL%" -X POST -d "%JSON_DATA%" > "%OUTFILE%" 2>&1
@@ -106,11 +128,11 @@ set "REQUEST_RC=%ERRORLEVEL%"
 goto SHOW_RESPONSE
 
 :SHOW_LOADING
-set "LOADING_TEXT=CONTACTING STATE BROKER..."
+set "LOADING_TEXT=CONTACTING GATEWAY NODE..."
 call :LOADING
 cls
 echo.
-echo %ESC%[96m  DARK-COM-2 :: STATE BROKER%ESC%[0m
+echo %ESC%[96m  GATEWAY :: ECLIPSE%ESC%[0m
 echo %ESC%[90m  ------------------------------------------------------------------------------%ESC%[0m
 echo %ESC%[93m  REQUEST%ESC%[0m  %REQUEST_LABEL%
 echo %ESC%[90m  Waiting for darkcom2.exe...%ESC%[0m
@@ -120,16 +142,16 @@ exit /b
 :SHOW_RESPONSE
 cls
 echo.
-echo %ESC%[96m  DARK-COM-2 :: STATE BROKER%ESC%[0m
+echo %ESC%[96m  GATEWAY :: ECLIPSE%ESC%[0m
 echo %ESC%[90m  ------------------------------------------------------------------------------%ESC%[0m
 echo %ESC%[93m  RESPONSE%ESC%[0m  %REQUEST_LABEL%
 echo %ESC%[90m  ------------------------------------------------------------------------------%ESC%[0m
 if exist "%OUTFILE%" (
-    powershell.exe -NoProfile -Command "$p=$env:TEMP+'\darkcom2_response_placeholder.txt'; $p=$env:OUTFILE; if(Test-Path -LiteralPath $p){$t=[IO.File]::ReadAllText($p); [Console]::Write($t)}"
+    powershell.exe -NoProfile -Command "$p=$env:TEMP+'\gateway_response_placeholder.txt'; $p=$env:OUTFILE; if(Test-Path -LiteralPath $p){$t=[IO.File]::ReadAllText($p); [Console]::Write($t)}"
 )
 echo.
 echo %ESC%[90m  ------------------------------------------------------------------------------%ESC%[0m
-if not "%REQUEST_RC%"=="0" echo %ESC%[91m  HTTP ENGINE EXIT CODE: %REQUEST_RC%%ESC%[0m
+if not "%REQUEST_RC%"=="0" echo %ESC%[91m  GATEWAY EXIT CODE: %REQUEST_RC%%ESC%[0m
 echo.
 pause
 goto MENU
@@ -200,7 +222,7 @@ goto RUN_POST
 :ASK_JSON
 cls
 echo.
-echo %ESC%[96m  DARK-COM-2 :: JSON PAYLOAD%ESC%[0m
+echo %ESC%[96m  GATEWAY :: JSON PAYLOAD%ESC%[0m
 echo %ESC%[90m  Enter a single-line JSON payload. Leave blank to cancel.%ESC%[0m
 echo.
 set "JSON_DATA="
@@ -217,7 +239,7 @@ exit /b 0
 if exist "%OUTFILE%" del "%OUTFILE%" >nul 2>&1
 <nul set /p "=%ESC%[H%ESC%[2J"
 echo.
-echo %ESC%[96m  DARK-COM-2 SHUTTING DOWN%ESC%[0m
+echo %ESC%[96m  GATEWAY SHUTTING DOWN%ESC%[0m
 echo.
 endlocal
 exit /b 0

@@ -117,9 +117,9 @@ Write-Host "[SUCCESS] Dark-Com-2 Engine installed successfully!" -ForegroundColo
 Write-Host "Location: $(Get-Location)" -ForegroundColor DarkGray
 Write-Host ""
 
-$response = Read-Host "Would you like to run darkcom2.ps1 now? (Y/N)"
+$response = Read-Host "Would you like to run Eclipse now? (Y/N)"
 
-if ($response -match '^[Yy]') {
+if ($response -match '^[Nn]') {
     Write-Host "[INFO] Attempting to launch darkcom2.ps1 from install directory..." -ForegroundColor Yellow
     try {
         & powershell.exe -ExecutionPolicy Bypass -File "$ScriptPath"

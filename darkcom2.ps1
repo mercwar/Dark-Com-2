@@ -1,4 +1,3 @@
-[CmdletBinding()]
 param (
     [Parameter(Mandatory = $false, Position = 0)]
     [string]$Url = "https://httpbin.org",
@@ -60,7 +59,7 @@ try {
     }
 "@
     if (-not ([System.Management.Automation.PSTypeName]'DarkComEngine').Type) {
-        Add-Type -TypeDefinition $NativeBridgeCode -ErrorAction SilentlyContinue
+        Add-Type -TypeDefinition $NativeBridgeCode -ErrorAction Stop
     }
 }
 catch {
@@ -85,7 +84,7 @@ try {
             public static extern bool SetDllDirectory(string lpPathName);
         }
 "@
-        Add-Type -TypeDefinition $KernelCode -ErrorAction SilentlyContinue
+        try { Add-Type -TypeDefinition $KernelCode -ErrorAction SilentlyContinue } catch {}
         [JobKernel32]::SetDllDirectory($DllDir) | Out-Null
 
         $BridgeCode = @"
@@ -96,7 +95,7 @@ try {
             public static extern IntPtr RunHeadlessRequest(string url, string postData);
         }
 "@
-        Add-Type -TypeDefinition $BridgeCode -ErrorAction SilentlyContinue
+        try { Add-Type -TypeDefinition $BridgeCode -ErrorAction SilentlyContinue } catch {}
 
         # Run the target headless transaction loop natively
         $Ptr = [JobEngine]::RunHeadlessRequest($TargetUrl, $PostData)
@@ -134,7 +133,7 @@ catch {
     Write-Error "[FATAL] An error crashed the processing loop: $_"
 }
 finally {
-    # Always scrub and clean background background jobs out of thread space memory pools
+    # Always scrub and clean background jobs out of thread space memory pools
     if ($BypassJob) {
         Remove-Job -Job $BypassJob -Force
     }

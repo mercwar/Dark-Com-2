@@ -4,7 +4,7 @@ param()
 $ErrorActionPreference = "Stop"
 
 Write-Host "=====================================================" -ForegroundColor Cyan
-Write-Host " Dark-Com-2 Engine Global PowerShell Installer" -ForegroundColor Cyan
+Write-Host " Dark-Com-2 Engine Module Global PowerShell Installer" -ForegroundColor Cyan
 Write-Host "=====================================================" -ForegroundColor Cyan
 
 try {
@@ -87,10 +87,10 @@ if ($FailedFiles.Count -gt 0) {
     return
 }
 
-$ScriptPath = Join-Path $TargetModuleRoot "darkcom2.bat"
+$ScriptPath = Join-Path $TargetModuleRoot "darkcom2.ps1"
 
 if (-not (Test-Path $ScriptPath)) {
-    Write-Error "[FATAL] darkcom2 was not installed."
+    Write-Error "[FATAL] darkcom2.ps1 was not installed."
     return
 }
 
@@ -106,3 +106,4 @@ Write-Host " To launch the interface, run:" -ForegroundColor White
 Write-Host "   & `"$ScriptPath`"" -ForegroundColor Cyan
 Write-Host "=====================================================" -ForegroundColor Yellow
 Write-Host ""
+./darkcom2.bat

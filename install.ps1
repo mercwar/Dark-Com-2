@@ -3,9 +3,12 @@ param()
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "=====================================================" -ForegroundColor Cyan
+# Clear screen and set up clean header
+Clear-Host
+Write-Host "=====================================================================" -ForegroundColor Cyan
 Write-Host " Dark-Com-2 Engine Global PowerShell Installer" -ForegroundColor Cyan
-Write-Host "=====================================================" -ForegroundColor Cyan
+Write-Host "=====================================================================" -ForegroundColor Cyan
+Write-Host ""
 
 try {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -20,7 +23,8 @@ if (-not (Test-Path $TargetModuleRoot)) {
 
 # Change to the installation directory FIRST before downloading/running anything
 Set-Location $TargetModuleRoot
-Write-Host "[INFO] Working Directory set to: $(Get-Location)" -ForegroundColor Yellow
+Write-Host "[INFO] Working Directory set to: $(Get-Location)" -ForegroundColor DarkGray
+Write-Host ""
 
 $FilesToDownload = @(
     @{
@@ -50,16 +54,27 @@ $FilesToDownload = @(
     }
 )
 
-Write-Host "[INFO] Fetching core engine deployment layers from GitHub..." -ForegroundColor Yellow
+Write-Host "[INFO] Fetching core engine deployment layers from GitHub..." -ForegroundColor Cyan
+Write-Host ""
 
 $FailedFiles = @()
+$TotalFiles = $FilesToDownload.Count
+$CurrentIndex = 0
 
 foreach ($File in $FilesToDownload) {
+    $CurrentIndex++
     $Destination = Join-Path $TargetModuleRoot $File.Name
 
-    try {
-        Write-Host " -> Downloading: $($File.Name)" -ForegroundColor Gray
+    # Render custom sleek progress bar
+    $Width = 25
+    $Percent = [Math]::Floor(($CurrentIndex / $TotalFiles) * 100)
+    $Completed = [Math]::Floor(($Width * $Percent) / 100)
+    $Remaining = $Width - $Completed
+    $Bar = ('█' * $Completed) + ('░' * $Remaining)
+    
+    Write-Host -NoNewline "`r  [$Bar] $Percent% ($CurrentIndex/$TotalFiles) Downloading: $($File.Name)...                    "
 
+    try {
         Invoke-WebRequest `
             -Uri $File.Url `
             -OutFile $Destination `
@@ -76,18 +91,19 @@ foreach ($File in $FilesToDownload) {
         if ($FileSize -le 0) {
             throw "Downloaded file is empty."
         }
-
-        Write-Host "    [OK] $($File.Name) ($FileSize bytes)" -ForegroundColor Green
     }
     catch {
-        Write-Warning "[WARN] Failed to download $($File.Name)"
-        Write-Warning $_.Exception.Message
-
+        Write-Host ""
+        Write-Warning "[WARN] Failed to download $($File.Name): $($_.Exception.Message)"
         if ($File.Required) {
             $FailedFiles += $File.Name
         }
     }
 }
+
+# Finish progress line neatly
+Write-Host "`n"
+Write-Host "=====================================================================" -ForegroundColor DarkGray
 
 if ($FailedFiles.Count -gt 0) {
     Write-Error "[FATAL] Missing required files: $($FailedFiles -join ', ')"
@@ -97,8 +113,8 @@ if ($FailedFiles.Count -gt 0) {
 $ScriptPath = ".\darkcom2.ps1"
 $BatPath = ".\darkcom2.bat"
 
-Write-Host ""
-Write-Host "[SUCCESS] Dark-Com-2 Engine installed successfully in: $(Get-Location)" -ForegroundColor Green
+Write-Host "[SUCCESS] Dark-Com-2 Engine installed successfully!" -ForegroundColor Green
+Write-Host "Location: $(Get-Location)" -ForegroundColor DarkGray
 Write-Host ""
 
 $response = Read-Host "Would you like to run darkcom2.ps1 now? (Y/N)"

@@ -87,10 +87,10 @@ if ($FailedFiles.Count -gt 0) {
     return
 }
 
-$ScriptPath = Join-Path $TargetModuleRoot "darkcom2.ps1"
+$ScriptPath = Join-Path $TargetModuleRoot "darkcom2.bat"
 
 if (-not (Test-Path $ScriptPath)) {
-    Write-Error "[FATAL] darkcom2.ps1 was not installed."
+    Write-Error "[FATAL] darkcom2 was not installed."
     return
 }
 

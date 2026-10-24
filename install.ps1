@@ -8,8 +8,7 @@ Write-Host " Dark-Com-2 Engine Global PowerShell Installer" -ForegroundColor Cya
 Write-Host "=====================================================" -ForegroundColor Cyan
 
 try {
-    [Net.ServicePointManager]::SecurityProtocol = `
-        [Net.SecurityProtocolType]::Tls12
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 } catch {}
 
 $TargetModuleRoot = Join-Path $HOME "Documents\DarkComEngine"
@@ -24,6 +23,11 @@ Set-Location $TargetModuleRoot
 Write-Host "[INFO] Working Directory set to: $(Get-Location)" -ForegroundColor Yellow
 
 $FilesToDownload = @(
+    @{
+        Name     = "darkcom2.exe"
+        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/darkcom2.exe"
+        Required = $true
+    },
     @{
         Name     = "DarkComHeadless.dll"
         Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/DarkComHeadless.dll"

@@ -5,10 +5,8 @@ Write-Host "=====================================================" -ForegroundCo
 Write-Host " Dark-Com-2 Engine Module Global PowerShell Installer" -ForegroundColor Cyan
 Write-Host "=====================================================" -ForegroundColor Cyan
 
-# 1. Define repository target paths and API endpoints
-$RepoOwner  = "mercwar"
-$RepoName   = "Dark-Com-2"
-$Branch     = "main"
+# 1. Target your explicit static raw storage distribution path
+$BaseUri = "https://raw.githubusercontent.com/mercwar/Dark-Com-2/main/"
 
 # 2. Establish target module installation folder
 $TargetModuleRoot = Join-Path $HOME "Documents\WindowsPowerShell\Modules\DarkCurl"
@@ -17,32 +15,28 @@ if (-not (Test-Path $TargetModuleRoot)) {
     New-Item -ItemType Directory -Path $TargetModuleRoot -Force | Out-Null
 }
 
-# 3. Enumerate layout target files
+# 3. Enumerate target source components
 $FilesToDownload = @(
     "DarkComHeadless.dll",
     "WebView2Loader.dll",
     "DarkCurl.psm1"
 )
 
-# 4. Perform live download loop using the GitHub API stream for binaries
+# 4. Stream application binaries directly from the raw GitHub context layout
 Write-Host "[INFO] Fetching core engine deployment layers from GitHub..." -ForegroundColor Yellow
 foreach ($FileName in $FilesToDownload) {
-    # Using the GitHub API stream ensures binary data integrity for DLLs
-    $SourceUrl   = "https://github.com"
+    # Append a randomized cache buster query string to bypass stale edge server caching
+    $SourceUrl   = "$BaseUri$FileName?cb=$(Get-Random)"
     $Destination = Join-Path $TargetModuleRoot $FileName
 
     try {
         Write-Host " -> Downloading: $FileName" -ForegroundColor Gray
         
-        # Request the metadata from the API to safely pull the download URL
-        $FileMetadata = Invoke-RestMethod -Uri $SourceUrl -Headers @{"Accept" = "application/vnd.github.v3+json"} -ErrorAction Stop
-        $DownloadUrl  = $FileMetadata.download_url
-        
-        # Stream the raw application binary down to the target path
-        Invoke-WebRequest -Uri $DownloadUrl -OutFile $Destination -ErrorAction Stop
+        # Invoke-WebRequest forces raw stream processing to ensure clean DLL alignment on disk
+        Invoke-WebRequest -Uri $SourceUrl -OutFile $Destination -TimeoutSec 30 -ErrorAction Stop
     }
     catch {
-        Write-Warning "[WARN] Failed to pull $FileName via API context. Checking local availability..."
+        Write-Warning "[WARN] Failed to pull $FileName from raw endpoint. Checking local backup context..."
         if (-not (Test-Path $Destination)) {
             Write-Error "[FATAL] Critical file missing and remote acquisition failed: $FileName"
             return
@@ -53,6 +47,7 @@ foreach ($FileName in $FilesToDownload) {
 # 5. Native session integration verification
 Write-Host "[INFO] Registering module variables into current terminal profile parameters..." -ForegroundColor Yellow
 try {
+    # Point directly to the newly dropped psm1 container layout context
     Import-Module -Name (Join-Path $TargetModuleRoot "DarkCurl.psm1") -Force -ErrorAction Stop
     
     Write-Host "`n[SUCCESS] DarkCurl Engine Pipeline Registered Natively into your PowerShell environment!" -ForegroundColor Green

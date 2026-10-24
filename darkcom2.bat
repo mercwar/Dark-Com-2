@@ -12,7 +12,7 @@ echo ============================================================
 echo         DARK-COM-2 STATE BROKER CONTROL PANEL
 echo ============================================================
 echo  [1] Read Application (Public)
-echo Write Application (Public)
+echo  [2] Write Application (Public)
 echo  [3] Read Application (Private)
 echo  [4] Write Application (Private)
 echo  [5] Read Session (Public)

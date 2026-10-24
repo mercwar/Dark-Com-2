@@ -2,80 +2,40 @@
 setlocal DisableDelayedExpansion
 
 title DARK-COM-2 :: STATE BROKER CONTROL PANEL
-
 cd /d "%~dp0"
 
 set "ENDPOINT=https://mercwar01.byethost3.com/darkcom2/index.php"
 set "SELECTION=1"
-set "ESC="
+set "KEY="
+set "JSON_DATA="
+set "REQUEST_URL="
+set "REQUEST_METHOD="
+set "REQUEST_BODY="
+set "OUTFILE=%TEMP%\darkcom2_response_%RANDOM%.txt"
 
 for /F %%A in ('echo prompt $E ^| cmd') do set "ESC=%%A"
 
-:: 1. Force the terminal application to resize using native ANSI escape codes
-:: This sequence works in modern Windows 11 terminals where 'mode con:' fails.
-<nul set /p="%ESC%[8;45;86t"
+:: Request ANSI support for classic Windows Console.
+reg add HKCU\Console /v VirtualTerminalLevel /t REG_DWORD /d 1 /f >nul 2>&1
 
-:: Enable ANSI colors on supported Windows terminals.
-reg query HKCU\Console /v VirtualTerminalLevel >nul 2>&1
-if errorlevel 1 reg add HKCU\Console /v VirtualTerminalLevel /t REG_DWORD /d 1 /f >nul 2>&1
+:: Ask supported modern terminals to use the desired dimensions.
+<nul set /p "=%ESC%[8;45;86t"
 
-:: Initial full screen clear on startup only
 cls
+goto MENU
+
+
+:: ============================================================
+:: BUFFERED MENU RENDERER
+:: Build the complete frame first, then write it in one call.
+:: ============================================================
 
 :MENU
-:: Snap cursor to top-left (0,0) and wipe all trailing characters to prevent ghosting/overlay
-<nul set /p "=%ESC%[H%ESC%[J"
-
-echo %ESC%[96m  ================================================================================%ESC%[0m
-echo %ESC%[96m   ____   _    ____  _  __  ____ ___  __  __ ____                                %ESC%[0m
-echo %ESC%[96m  ^|  _ \ / \  ^|  _ \^| ^|/ / / ___/ _ \^|  \/  ^|___ \                               %ESC%[0m
-echo %ESC%[96m  ^| ^| ^| / _ \ ^| ^|_) ^| ' / ^| ^|  ^| ^| ^| ^| ^|^|/ ^| __) ^|                              %ESC%[0m
-echo %ESC%[96m  ^| ^|_^| / ___ \^|  _ ^<^| . \ ^| ^|__^| ^|_^| ^|  ^|  ^|/ __/                            %ESC%[0m
-echo %ESC%[96m  ^|____/_/   \_\_^| \_\_^|\_\ \____\___/^|^|  ^|_^|_____^|                             %ESC%[0m
-echo %ESC%[96m  ================================================================================%ESC%[0m
-echo.
-echo   %ESC%[93m              D A R K - C O M - 2%ESC%[0m
-echo   %ESC%[97m             STATE BROKER CONTROL PANEL%ESC%[0m
-echo   %ESC%[90m             SECURE DATA  ::  SESSION ROUTING%ESC%[0m
-echo.
-echo   %ESC%[96m  [ SYSTEM ENDPOINT ]%ESC%[0m
-echo   %ESC%[90m  %%ENDPOINT%%%ESC%[0m
-echo.
-echo   %ESC%[96m  ------------------------------------------------------------------------------%ESC%[0m
-echo   %ESC%[93m  NAVIGATION%ESC%[0m  %ESC%[97mUP / DOWN%ESC%[0m  %ESC%[90mor%ESC%[0m  %ESC%[97mW / S%ESC%[0m  %ESC%[90m^|%ESC%[0m  %ESC%[97m1-9%ESC%[0m  %ESC%[90mJUMP%ESC%[0m  %ESC%[90m^|%ESC%[0m  %ESC%[97mENTER%ESC%[0m  %ESC%[90mSELECT%ESC%[0m
-echo   %ESC%[96m  ==============================================================================%ESC%[0m
-echo.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$e=[char]27; $s=[int]$env:SELECTION; $c=$e+'[0m'; $f=New-Object 'System.Collections.Generic.List[string]'; $f.Add($e+'[H'+$e+'[2J'); $f.Add($e+'[96m  ============================================================================'+$c); $f.Add($e+'[96m   ____    _    ____  _  __  ____ ___  __  __ ____'+$c); $f.Add($e+'[96m   ^|  _ \\  / \\  ^|  _ \\^| ^|/ / / ___/ _ \\^|  \\/  ^|___ \\'+$c); $f.Add($e+'[96m   ^| ^| ^| / _ \\ ^| ^|_) ^| '' / ^| ^|   ^| ^| ^| ^|\\/^| ^| __) /'+$c); $f.Add($e+'[96m   ^| ^|_^| / ___ \\^|  _ <^| . \\ ^| ^|__^| ^|_^| ^|   ^| ^|/ __/ '+$c); $f.Add($e+'[96m   ^|____/_/   \\_\\_^| ^|\\_\\_\\_\\ \\____\\___/^|_^|  |_^|_____^|'+$c); $f.Add($e+'[96m  ============================================================================'+$c); $f.Add(''); $f.Add($e+'[93m             D A R K - C O M - 2'+$c); $f.Add($e+'[97m             STATE BROKER CONTROL PANEL'+$c); $f.Add($e+'[90m             SECURE DATA  ::  SESSION ROUTING'+$c); $f.Add(''); $f.Add($e+'[96m  [ SYSTEM ENDPOINT ]'+$c); $f.Add($e+'[90m  '+$env:ENDPOINT+$c); $f.Add(''); $f.Add($e+'[96m  --------------------------------------------------------------------------'+$c); $f.Add($e+'[93m  NAVIGATION'+$c+'  '+$e+'[97mUP / DOWN'+$c+'  '+$e+'[90mor'+$c+'  '+$e+'[97mW / S'+$c+'  '+$e+'[90m|'+$c+'  '+$e+'[97m1-9'+$c+'  '+$e+'[90mJUMP'+$c+'  '+$e+'[90m|'+$c+'  '+$e+'[97mENTER'+$c+'  '+$e+'[90mSELECT'+$c); $f.Add($e+'[96m  ==========================================================================v'+$c); $f.Add(''); $labels=@('READ  APPLICATION STATE  [PUBLIC]','WRITE APPLICATION STATE  [PUBLIC]','READ  APPLICATION STATE  [PRIVATE]','WRITE APPLICATION STATE  [PRIVATE]','READ  SESSION STATE        [PUBLIC]','WRITE SESSION STATE        [PUBLIC]','READ  SESSION STATE        [PRIVATE]','WRITE SESSION STATE        [PRIVATE]','EXIT CONTROL PANEL'); for($i=1;$i -le 9;$i++){if($i -eq 5){$f.Add('');$f.Add($e+'[90m  SESSION OPERATIONS'+$c)}; $p = if($i -eq $s) { '  >   ['+$i+']   ' } else { '      ['+$i+']   ' }; $line = ($p + $labels[$i-1]).PadRight(74); if($i -eq $s){$f.Add($e+'[30;103m'+$line+$c)}else{$f.Add($e+'[97m'+$line+$c)}}; $f.Add(''); $f.Add($e+'[96m  --------------------------------------------------------------------------'+$c); $f.Add($e+'[90m  HTTP ENGINE:'+ $c+' darkcom2.exe   '+$e+'[90mPROTOCOL:'+ $c+' curl-compatible options'); $f.Add($e+'[90m  STATUS:'+ $c+' Ready'); [Console]::Write($f -join [Environment]::NewLine)"
 
 
-echo.
 
-call :DRAW_OPTION 1 "READ " "APPLICATION STATE" "PUBLIC"
-call :DRAW_OPTION 2 "WRITE" "APPLICATION STATE" "PUBLIC"
-call :DRAW_OPTION 3 "READ " "APPLICATION STATE" "PRIVATE"
-call :DRAW_OPTION 4 "WRITE" "APPLICATION STATE" "PRIVATE"
-
-echo.
-echo   %ESC%[90mSESSION OPERATIONS%ESC%[0m
-call :DRAW_OPTION 5 "READ " "SESSION STATE    " "PUBLIC"
-call :DRAW_OPTION 6 "WRITE" "SESSION STATE    " "PUBLIC"
-call :DRAW_OPTION 7 "READ " "SESSION STATE    " "PRIVATE"
-call :DRAW_OPTION 8 "WRITE" "SESSION STATE    " "PRIVATE"
-
-echo.
-if "%SELECTION%"=="9" (
-    echo   %ESC%[41;97m  ^>  EXIT CONTROL PANEL                                                %ESC%[0m
-) else (
-    echo   %ESC%[97m      EXIT CONTROL PANEL                                                %ESC%[0m
-)
-
-echo.
-echo   %ESC%[96m------------------------------------------------------------------------------%ESC%[0m
-echo   %ESC%[90mHTTP ENGINE:%ESC%[0m darkcom2.exe   %ESC%[90mPROTOCOL:%ESC%[0m curl-compatible options
-echo   %ESC%[90mSTATUS:%ESC%[0m Ready
-echo.
-
-:: Capture keyboard input including UP/DOWN arrows, W/S, Enter, and Numbers 1-9 via PowerShell
-for /f "delims=" %%k in ('powershell -NoProfile -Command "$k = [Console]::ReadKey($true); if ($k.Key -eq 'UpArrow') { 'UP' } elseif ($k.Key -eq 'DownArrow') { 'DOWN' } elseif ($k.Key -eq 'Enter') { 'ENTER' } else { $k.KeyChar.ToString() }"') do set "KEY=%%k"
+for /f "delims=" %%K in ('powershell.exe -NoProfile -Command "$k=[Console]::ReadKey($true); if($k.Key -eq [ConsoleKey]::UpArrow){[Console]::WriteLine([char[]](85,80))} elseif($k.Key -eq [ConsoleKey]::DownArrow){[Console]::WriteLine([char[]](68,79,87,78))} elseif($k.Key -eq [ConsoleKey]::Enter){[Console]::WriteLine([char[]](69,78,84,69,82))} else {$n=[int]$k.KeyChar; if($n -ge 97 -and $n -le 122){$n-=32}; [Console]::WriteLine([char]$n)}"') do set "KEY=%%K"
 
 if /i "%KEY%"=="UP" goto KEY_UP
 if /i "%KEY%"=="W" goto KEY_UP
@@ -83,25 +43,27 @@ if /i "%KEY%"=="DOWN" goto KEY_DOWN
 if /i "%KEY%"=="S" goto KEY_DOWN
 if /i "%KEY%"=="ENTER" goto EXECUTE_CHOICE
 
-if "%KEY%"=="1" set "SELECTION=1" & goto EXECUTE_CHOICE
-if "%KEY%"=="2" set "SELECTION=2" & goto EXECUTE_CHOICE
-if "%KEY%"=="3" set "SELECTION=3" & goto EXECUTE_CHOICE
-if "%KEY%"=="4" set "SELECTION=4" & goto EXECUTE_CHOICE
-if "%KEY%"=="5" set "SELECTION=5" & goto EXECUTE_CHOICE
-if "%KEY%"=="6" set "SELECTION=6" & goto EXECUTE_CHOICE
-if "%KEY%"=="7" set "SELECTION=7" & goto EXECUTE_CHOICE
-if "%KEY%"=="8" set "SELECTION=8" & goto EXECUTE_CHOICE
-if "%KEY%"=="9" set "SELECTION=9" & goto EXECUTE_CHOICE
+if "%KEY%"=="1" (set "SELECTION=1"&goto EXECUTE_CHOICE)
+if "%KEY%"=="2" (set "SELECTION=2"&goto EXECUTE_CHOICE)
+if "%KEY%"=="3" (set "SELECTION=3"&goto EXECUTE_CHOICE)
+if "%KEY%"=="4" (set "SELECTION=4"&goto EXECUTE_CHOICE)
+if "%KEY%"=="5" (set "SELECTION=5"&goto EXECUTE_CHOICE)
+if "%KEY%"=="6" (set "SELECTION=6"&goto EXECUTE_CHOICE)
+if "%KEY%"=="7" (set "SELECTION=7"&goto EXECUTE_CHOICE)
+if "%KEY%"=="8" (set "SELECTION=8"&goto EXECUTE_CHOICE)
+if "%KEY%"=="9" (set "SELECTION=9"&goto EXECUTE_CHOICE)
 
 goto MENU
 
+
 :KEY_UP
-if "%SELECTION%"=="1" (set "SELECTION=9") else (set /a "SELECTION-=1")
+if "%SELECTION%"=="1" (set "SELECTION=9") else (set /a SELECTION-=1)
 goto MENU
 
 :KEY_DOWN
-if "%SELECTION%"=="9" (set "SELECTION=1") else (set /a "SELECTION+=1")
+if "%SELECTION%"=="9" (set "SELECTION=1") else (set /a SELECTION+=1)
 goto MENU
+
 
 :EXECUTE_CHOICE
 if "%SELECTION%"=="1" goto READ_APP_PUB
@@ -112,108 +74,150 @@ if "%SELECTION%"=="5" goto READ_SES_PUB
 if "%SELECTION%"=="6" goto WRITE_SES_PUB
 if "%SELECTION%"=="7" goto READ_SES_PRIV
 if "%SELECTION%"=="8" goto WRITE_SES_PRIV
-if "%SELECTION%"=="9" exit /b 0
+if "%SELECTION%"=="9" goto EXIT_APP
 goto MENU
 
 
-:DRAW_OPTION
-if "%SELECTION%"=="%~1" (
-    echo   %ESC%[30;103m  ^>  [%~1]  %~2  %~3  [%~4]                                     %ESC%[0m
-) else (
-    echo   %ESC%[97m      [%~1]  %~2  %~3  [%~4]                                     %ESC%[0m
-)
+:: ============================================================
+:: LOADING INDICATOR
+:: Animated in place, without printing a new line per frame.
+:: ============================================================
+
+:LOADING
+powershell.exe -NoProfile -Command "$e=[char]27; $frames=@('|','/','-','\'); for($i=0;$i -lt 8;$i++){[Console]::Write($e+'[H'+$e+'[96m  '+$frames[$i %% 4]+' '+$env:LOADING_TEXT+$e+'[0m'); Start-Sleep -Milliseconds 70}"
 exit /b
 
 
-:: Inline function helper for pretty printing JSON without breaking batch context scope
-:DO_PRINT
-echo.
-echo %ESC%[92m[PARSED RESPONSE]:%ESC%[0m
-powershell.exe -NoProfile -Command "$input | ConvertFrom-Json | ConvertTo-Json" 2>nul
-if errorlevel 1 echo [Raw Output or Empty Response]
-goto :EOF
+:: ============================================================
+:: REQUEST EXECUTION
+:: Capture output to a file, then paint the response together.
+:: ============================================================
 
+:RUN_GET
+call :SHOW_LOADING
+darkcom2.exe "%REQUEST_URL%" -X GET > "%OUTFILE%" 2>&1
+set "REQUEST_RC=%ERRORLEVEL%"
+goto SHOW_RESPONSE
+
+:RUN_POST
+call :SHOW_LOADING
+darkcom2.exe "%REQUEST_URL%" -X POST -d "%JSON_DATA%" > "%OUTFILE%" 2>&1
+set "REQUEST_RC=%ERRORLEVEL%"
+goto SHOW_RESPONSE
+
+:SHOW_LOADING
+set "LOADING_TEXT=CONTACTING STATE BROKER..."
+call :LOADING
+cls
+echo.
+echo %ESC%[96m  DARK-COM-2 :: STATE BROKER%ESC%[0m
+echo %ESC%[90m  ------------------------------------------------------------------------------%ESC%[0m
+echo %ESC%[93m  REQUEST%ESC%[0m  %REQUEST_LABEL%
+echo %ESC%[90m  Waiting for darkcom2.exe...%ESC%[0m
+echo.
+exit /b
+
+:SHOW_RESPONSE
+cls
+echo.
+echo %ESC%[96m  DARK-COM-2 :: STATE BROKER%ESC%[0m
+echo %ESC%[90m  ------------------------------------------------------------------------------%ESC%[0m
+echo %ESC%[93m  RESPONSE%ESC%[0m  %REQUEST_LABEL%
+echo %ESC%[90m  ------------------------------------------------------------------------------%ESC%[0m
+if exist "%OUTFILE%" (
+    powershell.exe -NoProfile -Command "$p=$env:TEMP+'\darkcom2_response_placeholder.txt'; $p=$env:OUTFILE; if(Test-Path -LiteralPath $p){$t=[IO.File]::ReadAllText($p); [Console]::Write($t)}"
+)
+echo.
+echo %ESC%[90m  ------------------------------------------------------------------------------%ESC%[0m
+if not "%REQUEST_RC%"=="0" echo %ESC%[91m  HTTP ENGINE EXIT CODE: %REQUEST_RC%%ESC%[0m
+echo.
+pause
+goto MENU
+
+
+:: ============================================================
+:: APPLICATION STATE
+:: ============================================================
 
 :READ_APP_PUB
-cls
-echo.
-echo [*] Fetching Application Public State...
-echo %ESC%[96m------------------------------------------------------------%ESC%[0m
-darkcom2.exe "%ENDPOINT%?public=true&application=true&write=false" -X GET
-echo %ESC%[96m------------------------------------------------------------%ESC%[0m
-pause
-goto MENU
+set "REQUEST_LABEL=READ APPLICATION PUBLIC"
+set "REQUEST_URL=%ENDPOINT%?public=true&application=true&write=false"
+goto RUN_GET
 
 :WRITE_APP_PUB
-cls
-echo.
-set /p "json_data=Enter JSON payload (e.g. {"status":"online"}): "
-echo [*] Writing to Application Public State...
-echo %ESC%[96m------------------------------------------------------------%ESC%[0m
-darkcom2.exe "%ENDPOINT%?public=true&application=true&write=true" -X POST -d "%json_data%"
-echo %ESC%[96m------------------------------------------------------------%ESC%[0m
-pause
-goto MENU
+set "REQUEST_LABEL=WRITE APPLICATION PUBLIC"
+set "REQUEST_URL=%ENDPOINT%?public=true&application=true&write=true"
+call :ASK_JSON
+if errorlevel 1 goto MENU
+goto RUN_POST
 
 :READ_APP_PRIV
-cls
-echo.
-echo [*] Fetching Application Private State...
-echo %ESC%[96m------------------------------------------------------------%ESC%[0m
-darkcom2.exe "%ENDPOINT%?public=false&application=true&write=false" -X GET
-echo %ESC%[96m------------------------------------------------------------%ESC%[0m
-pause
-goto MENU
+set "REQUEST_LABEL=READ APPLICATION PRIVATE"
+set "REQUEST_URL=%ENDPOINT%?public=false&application=true&write=false"
+goto RUN_GET
 
 :WRITE_APP_PRIV
-cls
-echo.
-set /p "json_data=Enter JSON payload: "
-echo [*] Writing to Application Private State...
-echo %ESC%[96m------------------------------------------------------------%ESC%[0m
-darkcom2.exe "%ENDPOINT%?public=false&application=true&write=true" -X POST -d "%json_data%"
-echo %ESC%[96m------------------------------------------------------------%ESC%[0m
-pause
-goto MENU
+set "REQUEST_LABEL=WRITE APPLICATION PRIVATE"
+set "REQUEST_URL=%ENDPOINT%?public=false&application=true&write=true"
+call :ASK_JSON
+if errorlevel 1 goto MENU
+goto RUN_POST
+
+
+:: ============================================================
+:: SESSION STATE
+:: ============================================================
 
 :READ_SES_PUB
-cls
-echo.
-echo [*] Fetching Session Public State...
-echo %ESC%[96m------------------------------------------------------------%ESC%[0m
-darkcom2.exe "%ENDPOINT%?public=true&application=false&write=false" -X GET
-echo %ESC%[96m------------------------------------------------------------%ESC%[0m
-pause
-goto MENU
+set "REQUEST_LABEL=READ SESSION PUBLIC"
+set "REQUEST_URL=%ENDPOINT%?public=true&application=false&write=false"
+goto RUN_GET
 
 :WRITE_SES_PUB
-cls
-echo.
-set /p "json_data=Enter JSON payload: "
-echo [*] Writing to Session Public State...
-echo %ESC%[96m------------------------------------------------------------%ESC%[0m
-darkcom2.exe "%ENDPOINT%?public=true&application=false&write=true" -X POST -d "%json_data%"
-echo %ESC%[96m------------------------------------------------------------%ESC%[0m
-pause
-goto MENU
+set "REQUEST_LABEL=WRITE SESSION PUBLIC"
+set "REQUEST_URL=%ENDPOINT%?public=true&application=false&write=true"
+call :ASK_JSON
+if errorlevel 1 goto MENU
+goto RUN_POST
 
 :READ_SES_PRIV
-cls
-echo.
-echo [*] Fetching Session Private State...
-echo %ESC%[96m------------------------------------------------------------%ESC%[0m
-darkcom2.exe "%ENDPOINT%?public=false&application=false&write=false" -X GET
-echo %ESC%[96m------------------------------------------------------------%ESC%[0m
-pause
-goto MENU
+set "REQUEST_LABEL=READ SESSION PRIVATE"
+set "REQUEST_URL=%ENDPOINT%?public=false&application=false&write=false"
+goto RUN_GET
 
 :WRITE_SES_PRIV
+set "REQUEST_LABEL=WRITE SESSION PRIVATE"
+set "REQUEST_URL=%ENDPOINT%?public=false&application=false&write=true"
+call :ASK_JSON
+if errorlevel 1 goto MENU
+goto RUN_POST
+
+
+:: ============================================================
+:: JSON INPUT
+:: ============================================================
+
+:ASK_JSON
 cls
 echo.
-set /p "json_data=Enter JSON payload: "
-echo [*] Writing to Session Private State...
-echo %ESC%[96m------------------------------------------------------------%ESC%[0m
-darkcom2.exe "%ENDPOINT%?public=false&application=false&write=true" -X POST -d "%json_data%"
-echo %ESC%[96m------------------------------------------------------------%ESC%[0m
-pause
-goto MENU
+echo %ESC%[96m  DARK-COM-2 :: JSON PAYLOAD%ESC%[0m
+echo %ESC%[90m  Enter a single-line JSON payload. Leave blank to cancel.%ESC%[0m
+echo.
+set "JSON_DATA="
+set /p "JSON_DATA=JSON: "
+if not defined JSON_DATA exit /b 1
+exit /b 0
+
+
+:: ============================================================
+:: EXIT APP
+:: ============================================================
+
+:EXIT_APP
+if exist "%OUTFILE%" del "%OUTFILE%" >nul 2>&1
+<nul set /p "=%ESC%[H%ESC%[2J"
+echo.
+echo %ESC%[96m  DARK-COM-2 SHUTTING DOWN%ESC%[0m
+echo.
+endlocal
+exit /b 0

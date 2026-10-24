@@ -11,7 +11,7 @@ $ESC = "$e"
 
 Clear-Host
 Write-Host "$ESC[96m=====================================================================$ESC[0m"
-Write-Host "$ESC[96m Dark-Com-2 Engine Global PowerShell Installer                      $ESC[0m"
+Write-Host "$ESC[96m Dark-Com-2 Engine Global PowerShell Installer                       $ESC[0m"
 Write-Host "$ESC[96m=====================================================================$ESC[0m"
 Write-Host ""
 
@@ -22,12 +22,12 @@ try {
 $TargetModuleRoot = Join-Path $HOME "Documents\DarkComEngine"
 
 if (-not (Test-Path $TargetModuleRoot)) {
-    Write-Host "$ESC[33m[INFO] Creating destination infrastructure layout...$ESC[0m"
+    Write-Host "$ESC[33m[INFO] Scanning destination...$ESC[0m"
     New-Item -ItemType Directory -Path $TargetModuleRoot -Force | Out-Null
 }
 
 Set-Location $TargetModuleRoot
-Write-Host "$ESC[90m[INFO] Working Directory set to: $(Get-Location)$ESC[0m"
+Write-Host "$ESC[90m[INFO] Downlink active: $(Get-Location)$ESC[0m"
 Write-Host ""
 
 $FilesToDownload = @(
@@ -58,7 +58,7 @@ $FilesToDownload = @(
     }
 )
 
-Write-Host "$ESC[94m[INFO] Fetching core engine deployment layers from GitHub...$ESC[0m"
+Write-Host "$ESC[94m[INFO] Installing...$ESC[0m"
 Write-Host ""
 
 # Helper function to paint a modern flat block progress bar safely inline
@@ -90,7 +90,7 @@ $TotalFiles = $FilesToDownload.Count
 $CurrentIndex = 0
 
 # Initial baseline render of the track
-Update-ProgressBar -Current 0 -Total $TotalFiles -FileName "Initializing Pipeline..."
+Update-ProgressBar -Current 0 -Total $TotalFiles -FileName "Initializing ..."
 
 foreach ($File in $FilesToDownload) {
     $Destination = Join-Path $TargetModuleRoot $File.Name
@@ -128,23 +128,23 @@ Update-ProgressBar -Current $TotalFiles -Total $TotalFiles -FileName "Deployment
 Write-Host "`n"
 
 if ($FailedFiles.Count -gt 0) {
-    Write-Error "$ESC[91m[FATAL] Missing required core architecture files: $($FailedFiles -join ', ')$ESC[0m"
+    Write-Error "$ESC[91m[FATAL] Missing required file(s): $($FailedFiles -join ', ')$ESC[0m"
     return
 }
 
 $ScriptPath = ".\darkcom2.ps1"
 $BatPath = ".\darkcom2.bat"
 
-Write-Host "[SUCCESS] Dark-Com-2 Engine infrastructure deployed successfully.`n" -ForegroundColor Green
+Write-Host "[SUCCESS] Dark-Com-2 installation successfully.`n" -ForegroundColor Green
 
 # ============================================================================
 # INTERACTIVE KEYBOARD-DRIVEN MENU SELECTION (FIXED RENDERING)
 # ============================================================================
 
 $MenuOptions = @(
-    "Run darkcom2.bat (State Broker Interactive Menu)",
-    "Run darkcom2.ps1 (Headless Runspace Broker Thread)",
-    "Exit Installer Sequence"
+    "Run Eclipse",
+    "Run DarkCom",
+    "Exit"
 )
 $Selection = 0
 $Running = $true
@@ -152,8 +152,10 @@ $Running = $true
 # Hide terminal cursor while browsing the selection list
 [Console]::CursorVisible = $false
 
-Write-Host "$ESC[33mWould you like to run Eclipse now?$ESC[0m"
-Write-Host "$ESC[90mUse UP/DOWN arrow keys and press ENTER to confirm choice:$ESC[0m`n"
+Write-Host "$ESC[33mEclipse will connect to the AVIS-DATALAKE for you$ESC[0m"
+Write-Host "$ESC[33m-------------------------------------------------$ESC[0m"
+Write-Host ""
+Write-Host "$ESC[90mUse UP/DOWN and ENTER to load an interface:$ESC[0m`n"
 
 # Capture the baseline starting line for absolute cursor placement
 $StartTop = [Console]::CursorTop
@@ -163,10 +165,11 @@ while ($Running) {
     [Console]::SetCursorPosition(0, $StartTop)
     
     for ($i = 0; $i -lt $MenuOptions.Count; $i++) {
+        # [FIX] Added $ESC[K to clear line trailing background artifacts/bleed
         if ($i -eq $Selection) {
-            Write-Host "$ESC[30;103m  > [X] $($MenuOptions[$i])  $ESC[0m"
+            [Console]::Write("$ESC[30;103m  > [X] $($MenuOptions[$i])  $ESC[0m$ESC[K`n")
         } else {
-            Write-Host "$ESC[97m    [ ] $($MenuOptions[$i]) $ESC[0m"
+            [Console]::Write("$ESC[97m    [ ] $($MenuOptions[$i]) $ESC[0m$ESC[K`n")
         }
     }
     
@@ -189,24 +192,24 @@ Clear-Host
 
 # Process branch targets based on final menu coordinate selection context
 if ($Selection -eq 0) {
-    Write-Host "$ESC[93m[INFO] Invoking state broker interactive console menu...$ESC[0m"
+    Write-Host "$ESC[93m[INFO] Loading Eclipse...$ESC[0m"
     if (Test-Path $BatPath) {
-		cls
+        cls
         & cmd.exe /c "$BatPath"
     } else {
-        Write-Error "$ESC[91m[ERROR] Batch routing asset is missing or inaccessible.$ESC[0m"
+        Write-Error "$ESC[91m[ERROR] Eclipse is missing or inaccessible.$ESC[0m"
     }
 } 
 elseif ($Selection -eq 1) {
-    Write-Host "$ESC[90m[INFO] Bypassing execution policies for headless Runspace Broker thread...$ESC[0m"
+    Write-Host "$ESC[90m[INFO] Loading DarkCom2...$ESC[0m"
     if (Test-Path $ScriptPath) {
         $ProcessArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`""
-		cls
+        cls
         Start-Process -FilePath "powershell.exe" -ArgumentList $ProcessArgs -NoNewWindow -Wait
     } else {
         Write-Error "$ESC[91m[ERROR] Native PowerShell backend execution script is missing.$ESC[0m"
     }
 } 
 else {
-    Write-Host "$ESC[90m[INFO] Installer sequence exiting. Launch your chosen protocol manually inside $TargetModuleRoot$ESC[0m"
+    Write-Host "$ESC[90m[INFO] Installer exiting. Launch manually: $TargetModuleRoot$ESC[0m"
 }

@@ -30,13 +30,29 @@ reg add HKCU\Console /v VirtualTerminalLevel /t REG_DWORD /d 1 /f >nul 2>&1
 :: ============================================================
 cls
 echo.
-echo %ESC%[96m  [~] Starting Eclips version 1.0..%ESC%[0m
+echo %ESC%[38;2;255;120;50m  ============================================================%ESC%[0m
+echo %ESC%[38;2;255;200;100m   ECLIPSE GATEWAY v1.0 AUTO DETECTION%ESC%[0m
+echo %ESC%[38;2;255;120;50m  ============================================================%ESC%[0m
 echo.
-set "REQUEST_LABEL=AUTO-TEST: READ APPLICATION PUBLIC"
+echo %ESC%[90m  Server  : %ESC%[37m%ENDPOINT%%ESC%[0m
+echo.
+echo %ESC%[90m  AVIS-DATALAKE HOST%ESC%[0m
+echo.
+echo.
+
+set "REQUEST_LABEL=AUTO-TEST: AVIS-DATALAKE"
 set "REQUEST_URL=%ENDPOINT%?public=true&application=true&write=false"
+
+:: Smooth loading indicator
+<nul set /p="%ESC%[93m  [~] Connecting to AVIS-DATALAKE... %ESC%[0m"
 call :RUN_GET_SILENT
-echo %ESC%[92m  [+] The Eclipse Gateway is ALIVE, Loading... %ESC%[0m
-timeout /t 2 >nul
+echo %ESC%[32m[DONE]%ESC%[0m
+
+echo.
+echo %ESC%[38;2;255;69;0m  ------------------------------------------------------------%ESC%[0m
+echo %ESC%[38;2;255;180;0m   [+] STATUS: GATEWAY ALIVE - LOADING CONSOLE...%ESC%[0m
+echo %ESC%[38;2;255;69;0m  ------------------------------------------------------------%ESC%[0m
+timeout /t 5 >nul
 
 cls
 goto MENU
@@ -48,7 +64,7 @@ goto MENU
 :: ============================================================
 
 :MENU
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$e=[char]27; $s=[int]$env:SELECTION; $c=$e+'[0m'; $f=New-Object 'System.Collections.Generic.List[string]'; $f.Add($e+'[H'+$e+'[2J'); $f.Add($e+'[96m  ============================================================================'+$c); $f.Add($e+'[96m   ____    _    ____  _  __  ____ ___  __  __ ____'+$c); $f.Add($e+'[96m   ^|  _ \\  / \\   ^|  _ \\^| ^|/ / / ___/ _ \\^|  \\/  ^|___ \\'+$c); $f.Add($e+'[96m   ^| ^| ^| / _ \\  ^| ^|_) ^| '' / ^| ^|    ^| ^| ^| ^|\\/^| ^| __) /'+$c); $f.Add($e+'[96m   ^| ^|_^| / ___ \\^|  _ <^| . \\ ^| ^|__^| ^|_^| ^|    ^| ^|/ __/ '+$c); $f.Add($e+'[96m   ^|____/_/   \\_\\_^| ^|\\_\\_\\_\\ \\____\\___/^|_^|  ^|_____^|'+$c); $f.Add($e+'[96m  ============================================================================'+$c); $f.Add(''); $f.Add($e+'[93m             G A T E W A Y   C O N T R O L'+$c); $f.Add($e+'[97m             ECLIPSE version 1.0'+$c); $f.Add($e+'[90m             AVIS PROTOCOL  ::  SESSION ROUTING'+$c); $f.Add(''); $f.Add($e+'[96m  [ GATEWAY ENDPOINT ]'+$c); $f.Add($e+'[90m   '+$env:ENDPOINT+$c); $f.Add(''); $f.Add($e+'[96m  --------------------------------------------------------------------------'+$c); $f.Add($e+'[93m  NAVIGATION'+$c+'  '+$e+'[97mUP / DOWN'+$c+'  '+$e+'[90mor'+$c+'  '+$e+'[97mW / S'+$c+'  '+$e+'[90m|'+$c+'  '+$e+'[97m1-9'+$c+'  '+$e+'[90mJUMP'+$c+'  '+$e+'[90m|'+$c+'  '+$e+'[97mENTER'+$c+'  '+$e+'[90mSELECT'+$c); $f.Add($e+'[96m  ==========================================================================v'+$c); $f.Add(''); $labels=@('READ  APPLICATION STATE  [PUBLIC]','WRITE APPLICATION STATE  [PUBLIC]','READ  APPLICATION STATE  [PRIVATE]','WRITE APPLICATION STATE  [PRIVATE]','READ  SESSION STATE        [PUBLIC]','WRITE SESSION STATE        [PUBLIC]','READ  SESSION STATE        [PRIVATE]','WRITE SESSION STATE        [PRIVATE]','EXIT GATEWAY CONSOLE'); for($i=1;$i -le 9;$i++){if($i -eq 5){$f.Add('');$f.Add($e+'[90m  SESSION OPERATIONS'+$c)}; $p = if($i -eq $s) { '  >    ['+$i+']   ' } else { '     ['+$i+']   ' }; $line = ($p + $labels[$i-1]).PadRight(74); if($i -eq $s){$f.Add($e+'[30;103m'+$line+$c)}else{$f.Add($e+'[97m'+$line+$c)}}; $f.Add(''); $f.Add($e+'[96m  --------------------------------------------------------------------------'+$c); $f.Add($e+'[90m  HTTP ENGINE:'+ $c+' darkcom2.exe   '+$e+'[90mPROTOCOL:'+ $c+' curl-compatible options'); $f.Add($e+'[90m  STATUS:'+ $c+' Gateway Online'); [Console]::Write($f -join [Environment]::NewLine)"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$e=[char]27; $s=[int]$env:SELECTION; $c=$e+'[0m'; $f=New-Object 'System.Collections.Generic.List[string]'; $f.Add($e+'[H'+$e+'[2J'); $f.Add($e+'[38;2;255;69;0m  ============================================================================'+$c); $f.Add($e+'[38;2;255;36;0m    ███████╗ ██████╗ ██║    ███████╗ ██████╗ ███████╗ ███████╗'+$c); $f.Add($e+'[38;2;255;94;0m    ██╔════╝██╔════╝██║      ██║    ██╔══██╗██╔════╝██╔════╝'+$c); $f.Add($e+'[38;2;255;140;0m   █████╗  ██║     ██║      ██║    ██████╔╝███████╗█████╗  '+$c); $f.Add($e+'[38;2;255;180;0m    ██╔══╝  ██║     ██║      ██║    ██╔═══╝ ╚════██║██╔══╝  '+$c); $f.Add($e+'[38;2;255;220;100m   ███████╗╚██████╗███████╗███████╗██║     ███████║███████╗'+$c); $f.Add($e+'[38;2;255;69;0m  ============================================================================'+$c); $f.Add(''); $f.Add($e+'[38;2;255;120;50m              G A T E W Y   C O N T R O L'+$c); $f.Add($e+'[38;2;255;200;100m              ECLIPSE version 1.0'+$c); $f.Add($e+'[90m              AVIS PROTOCOL  ::  SESSION ROUTING'+$c); $f.Add(''); $f.Add($e+'[38;2;255;140;0m  [ DATALAKE : AVIS ]'+$c); $f.Add(''); $f.Add($e+'[90m   '+$env:ENDPOINT+$c); $f.Add(''); $f.Add($e+'[38;2;255;69;0m  --------------------------------------------------------------------------'+$c); $f.Add($e+'[38;2;255;165;0m  NAVIGATION'+$c+'  '+$e+'[97mUP / DOWN'+$c+'  '+$e+'[90mor'+$c+'  '+$e+'[97mW / S'+$c+'  '+$e+'[90m|'+$c+'  '+$e+'[97m1-9'+$c+'  '+$e+'[90mJUMP'+$c+'  '+$e+'[90m|'+$c+'  '+$e+'[97mENTER'+$c+'  '+$e+'[90mSELECT'+$c); $f.Add($e+'[38;2;255;69;0m  ============================================================================'+$c); $f.Add(''); $labels=@('READ  PUBLIC APPLICATION','WRITE PUBLIC APPLICATION','READ  PRIVATE APPLICATION','WRITE PRIVATE APPLICATION','READ  PUBLIC SESSION','WRITE PUBLIC SESSION','READ  PRIVATE SESSION','WRITE PRIVATE SESSION','EXIT GATEWAY CONSOLE'); for($i=1;$i -le 9;$i++){if($i -eq 5){$f.Add('');$f.Add($e+'[90m  SESSION OPERATIONS'+$c)}; $p = if($i -eq $s) { '  >    ['+$i+']    ' } else { '     ['+$i+']    ' }; $line = ($p + $labels[$i-1]).PadRight(74); if($i -eq $s){$f.Add($e+'[30;103m'+$line+$c)}else{$f.Add($e+'[97m'+$line+$c)}}; $f.Add(''); $f.Add($e+'[38;2;255;69;0m  --------------------------------------------------------------------------'+$c); $f.Add($e+'[90m  HTTP ENGINE:'+ $c+' Eclipse v1.0    '+$e+'[90mCLIENT:'+ $c+' Eclipse Console'); $f.Add($e+'[90m  STATUS:'+ $c+' Gateway Online'); [Console]::Write($f -join [Environment]::NewLine)"
 
 
 
@@ -162,24 +178,24 @@ goto MENU
 :: ============================================================
 
 :READ_APP_PUB
-set "REQUEST_LABEL=READ APPLICATION PUBLIC"
+set "REQUEST_LABEL=READ PUBLIC APPLICATION"
 set "REQUEST_URL=%ENDPOINT%?public=true&application=true&write=false"
 goto RUN_GET
 
 :WRITE_APP_PUB
-set "REQUEST_LABEL=WRITE APPLICATION PUBLIC"
+set "REQUEST_LABEL=WRITE PUBLIC APPLICATION"
 set "REQUEST_URL=%ENDPOINT%?public=true&application=true&write=true"
 call :ASK_JSON
 if errorlevel 1 goto MENU
 goto RUN_POST
 
 :READ_APP_PRIV
-set "REQUEST_LABEL=READ APPLICATION PRIVATE"
+set "REQUEST_LABEL=READ PRIVATE APPLICATION"
 set "REQUEST_URL=%ENDPOINT%?public=false&application=true&write=false"
 goto RUN_GET
 
 :WRITE_APP_PRIV
-set "REQUEST_LABEL=WRITE APPLICATION PRIVATE"
+set "REQUEST_LABEL=WRITE PRIVATE APPLICATION"
 set "REQUEST_URL=%ENDPOINT%?public=false&application=true&write=true"
 call :ASK_JSON
 if errorlevel 1 goto MENU
@@ -191,24 +207,24 @@ goto RUN_POST
 :: ============================================================
 
 :READ_SES_PUB
-set "REQUEST_LABEL=READ SESSION PUBLIC"
+set "REQUEST_LABEL=READ PUBLIC SESSION"
 set "REQUEST_URL=%ENDPOINT%?public=true&application=false&write=false"
 goto RUN_GET
 
 :WRITE_SES_PUB
-set "REQUEST_LABEL=WRITE SESSION PUBLIC"
+set "REQUEST_LABEL=WRITE PUBLIC SESSION"
 set "REQUEST_URL=%ENDPOINT%?public=true&application=false&write=true"
 call :ASK_JSON
 if errorlevel 1 goto MENU
 goto RUN_POST
 
 :READ_SES_PRIV
-set "REQUEST_LABEL=READ SESSION PRIVATE"
+set "REQUEST_LABEL=READ PRIVATE SESSION"
 set "REQUEST_URL=%ENDPOINT%?public=false&application=false&write=false"
 goto RUN_GET
 
 :WRITE_SES_PRIV
-set "REQUEST_LABEL=WRITE SESSION PRIVATE"
+set "REQUEST_LABEL=WRITE PRIVATE SESSION"
 set "REQUEST_URL=%ENDPOINT%?public=false&application=false&write=true"
 call :ASK_JSON
 if errorlevel 1 goto MENU
@@ -222,7 +238,7 @@ goto RUN_POST
 :ASK_JSON
 cls
 echo.
-echo %ESC%[96m  GATEWAY :: JSON PAYLOAD%ESC%[0m
+echo %ESC%[96m  GATEWAY :: DATA%ESC%[0m
 echo %ESC%[90m  Enter a single-line JSON payload. Leave blank to cancel.%ESC%[0m
 echo.
 set "JSON_DATA="

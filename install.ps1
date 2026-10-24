@@ -4,41 +4,51 @@ param()
 $ErrorActionPreference = "Stop"
 
 Write-Host "=====================================================" -ForegroundColor Cyan
-Write-Host " Dark-Com-2 Global Engine Installer & Auto-Runner" -ForegroundColor Cyan
+Write-Host " Dark-Com-2 Engine Module Global PowerShell Installer" -ForegroundColor Cyan
 Write-Host "=====================================================" -ForegroundColor Cyan
 
-# 1. Establish directory layout for binaries and scripts
-$TargetDirectory = Join-Path $HOME "Documents\DarkComEngine"
+try {
+    [Net.ServicePointManager]::SecurityProtocol = `
+        [Net.SecurityProtocolType]::Tls12
+} catch {}
 
-if (-not (Test-Path $TargetDirectory)) {
-    Write-Host "[INFO] Creating binary storage directory..." -ForegroundColor Yellow
-    New-Item -ItemType Directory -Path $TargetDirectory -Force | Out-Null
+$TargetModuleRoot = Join-Path $HOME "Documents\DarkComEngine"
+
+if (-not (Test-Path $TargetModuleRoot)) {
+    Write-Host "[INFO] Creating destination infrastructure layout..." -ForegroundColor Yellow
+    New-Item -ItemType Directory -Path $TargetModuleRoot -Force | Out-Null
 }
 
-# 2. Download all core binaries and scripts directly from GitHub main branch
 $FilesToDownload = @(
     @{
-        Name = "DarkComHeadless.dll"
-        Url  = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/DarkComHeadless.dll"
+        Name     = "DarkComHeadless.dll"
+        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/DarkComHeadless.dll"
+        Required = $true
     },
     @{
-        Name = "WebView2Loader.dll"
-        Url  = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/WebView2Loader.dll"
+        Name     = "WebView2Loader.dll"
+        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/WebView2Loader.dll"
+        Required = $true
     },
     @{
-        Name = "darkcom2.bat"
-        Url  = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/darkcom2.bat"
+        Name     = "darkcom2.ps1"
+        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/darkcom2.ps1"
+        Required = $true
     },
     @{
-        Name = "dcurl.ps1"
-        Url  = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/darkcom.ps1"
+        Name     = "darkcom2.bat"
+        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/darkcom2.bat"
+        Required = $false
     }
 )
 
-Write-Host "[INFO] Fetching core engine components from GitHub..." -ForegroundColor Yellow
+Write-Host "[INFO] Fetching core engine deployment layers from GitHub..." -ForegroundColor Yellow
+
+$FailedFiles = @()
 
 foreach ($File in $FilesToDownload) {
-    $Destination = Join-Path $TargetDirectory $File.Name
+
+    $Destination = Join-Path $TargetModuleRoot $File.Name
 
     try {
         Write-Host " -> Downloading: $($File.Name)" -ForegroundColor Gray
@@ -50,219 +60,50 @@ foreach ($File in $FilesToDownload) {
             -TimeoutSec 30 `
             -ErrorAction Stop
 
-        if (-not (Test-Path $Destination) -or (Get-Item $Destination).Length -eq 0) {
-            throw "Downloaded file is empty or missing."
+        if (-not (Test-Path $Destination)) {
+            throw "File was not created."
         }
 
-        Write-Host "    [OK] $($File.Name)" -ForegroundColor Green
+        $FileSize = (Get-Item $Destination).Length
+
+        if ($FileSize -le 0) {
+            throw "Downloaded file is empty."
+        }
+
+        Write-Host "    [OK] $($File.Name) ($FileSize bytes)" -ForegroundColor Green
     }
     catch {
-        Write-Error "[FATAL] Failed to download $($File.Name): $_"
-        return
-    }
-}
+        Write-Warning "[WARN] Failed to download $($File.Name)"
+        Write-Warning $_.Exception.Message
 
-# 3. Configure DLL Search Path in-memory
-Add-Type -TypeDefinition @"
-using System;
-using System.Runtime.InteropServices;
-public class DarkKernel32 {
-    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-    public static extern bool SetDllDirectory(string lpPathName);
-}
-"@ -ErrorAction SilentlyContinue
-
-[DarkKernel32]::SetDllDirectory($TargetDirectory) | Out-Null
-
-# 4. Compile unmanaged C# interop bridge with CommandLineArgs structure layout
-$NativeBridgeCode = @"
-using System;
-using System.Runtime.InteropServices;
-
-[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-public struct CommandLineArgsStruct {
-    public IntPtr url;
-    public IntPtr method;
-    public IntPtr postData;
-    public int isVerbose;
-}
-
-public class DarkComEngine {
-    [DllImport("DarkComHeadless.dll", CharSet = CharSet.Unicode, CallingConvention = CallingConvention.Cdecl)]
-    public static extern IntPtr RunHeadlessRequest(ref CommandLineArgsStruct args);
-}
-"@
-
-if (-not ([System.Management.Automation.PSTypeName]'DarkComEngine').Type) {
-    Add-Type -TypeDefinition $NativeBridgeCode -ErrorAction SilentlyContinue
-}
-
-# 5. Define Invoke-DarkCurl function in global memory session
-function global:Invoke-DarkCurl {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory = $true, Position = 0)]
-        [string]$Url,
-
-        [Parameter(Mandatory = $false, Position = 1)]
-        [string]$Method = "GET",
-
-        [Parameter(Mandatory = $false, Position = 2)]
-        [string]$Data = $null,
-
-        [Parameter(Mandatory = $false)]
-        [switch]$VerboseLog
-    )
-
-    process {
-        try {
-            if ($Data -and -not $PSBoundParameters.ContainsKey('Method')) {
-                $Method = "POST"
-            }
-
-            $argsStruct = New-Object CommandLineArgsStruct
-            $argsStruct.url = [System.Runtime.InteropServices.Marshal]::StringToHSTRUnmanaged($Url)
-            $argsStruct.method = [System.Runtime.InteropServices.Marshal]::StringToHSTRUnmanaged($Method)
-            
-            if (![string]::IsNullOrEmpty($Data)) {
-                $argsStruct.postData = [System.Runtime.InteropServices.Marshal]::StringToHSTRUnmanaged($Data)
-            } else {
-                $argsStruct.postData = [IntPtr]::Zero
-            }
-            $argsStruct.isVerbose = if ($VerboseLog) { 1 } else { 0 }
-
-            $ResultBufferPtr = [DarkComEngine]::RunHeadlessRequest([ref]$argsStruct)
-
-            if ($ResultBufferPtr -ne [IntPtr]::Zero) {
-                [System.Runtime.InteropServices.Marshal]::PtrToStringAnsi($ResultBufferPtr)
-            } else {
-                Write-Error "[ERROR] Execution returned a null buffer pointer."
-            }
-
-            [System.Runtime.InteropServices.Marshal]::FreeHSTRUnmanaged($argsStruct.url)
-            if ($argsStruct.method -ne [IntPtr]::Zero) { [System.Runtime.InteropServices.Marshal]::FreeHSTRUnmanaged($argsStruct.method) }
-            if ($argsStruct.postData -ne [IntPtr]::Zero) { [System.Runtime.InteropServices.Marshal]::FreeHSTRUnmanaged($argsStruct.postData) }
-        }
-        catch {
-            Write-Error "[FATAL] Interop transaction failed: $_"
+        if ($File.Required) {
+            $FailedFiles += $File.Name
         }
     }
 }
 
-# 6. Define the Interactive State Broker Menu (dmenu) in global memory session
-function global:Invoke-DarkMenu {
-    [CmdletBinding()]
-    param()
-
-    $Endpoint = "https://cron.iblogger.org/darkcom2/index.php"
-
-    while ($true) {
-        Clear-Host
-        Write-Host "============================================================" -ForegroundColor Cyan
-        Write-Host "        DARK-COM-2 STATE BROKER CONTROL PANEL (PowerShell)" -ForegroundColor Cyan
-        Write-Host "============================================================" -ForegroundColor Cyan
-        Write-Host " [1] Read Application (Public)"
-        Write-Host " [2] Write Application (Public)"
-        Write-Host " [3] Read Application (Private)"
-        Write-Host " [4] Write Application (Private)"
-        Write-Host " [5] Read Session (Public)"
-        Write-Host " [6] Write Session (Public)"
-        Write-Host " [7] Read Session (Private)"
-        Write-Host " [8] Write Session (Private)"
-        Write-Host " [9] Exit"
-        Write-Host "============================================================" -ForegroundColor Cyan
-        
-        $choice = Read-Host "Select option [1-9]"
-
-        switch ($choice) {
-            "1" {
-                Write-Host "`n[*] Fetching Application Public State..." -ForegroundColor Yellow
-                Write-Host "------------------------------------------------------------" -ForegroundColor Gray
-                Invoke-DarkCurl "$Endpoint?public=true&application=true&write=false" -Method GET
-                Write-Host "------------------------------------------------------------" -ForegroundColor Gray
-                Read-Host "Press Enter to continue"
-            }
-            "2" {
-                Write-Host "`n"
-                $jsonData = Read-Host 'Enter JSON payload (e.g. {"status":"online"})'
-                Write-Host "[*] Writing to Application Public State..." -ForegroundColor Yellow
-                Write-Host "------------------------------------------------------------" -ForegroundColor Gray
-                Invoke-DarkCurl "$Endpoint?public=true&application=true&write=true" -Method POST -Data $jsonData
-                Write-Host "------------------------------------------------------------" -ForegroundColor Gray
-                Read-Host "Press Enter to continue"
-            }
-            "3" {
-                Write-Host "`n[*] Fetching Application Private State..." -ForegroundColor Yellow
-                Write-Host "------------------------------------------------------------" -ForegroundColor Gray
-                Invoke-DarkCurl "$Endpoint?public=false&application=true&write=false" -Method GET
-                Write-Host "------------------------------------------------------------" -ForegroundColor Gray
-                Read-Host "Press Enter to continue"
-            }
-            "4" {
-                Write-Host "`n"
-                $jsonData = Read-Host 'Enter JSON payload'
-                Write-Host "[*] Writing to Application Private State..." -ForegroundColor Yellow
-                Write-Host "------------------------------------------------------------" -ForegroundColor Gray
-                Invoke-DarkCurl "$Endpoint?public=false&application=true&write=true" -Method POST -Data $jsonData
-                Write-Host "------------------------------------------------------------" -ForegroundColor Gray
-                Read-Host "Press Enter to continue"
-            }
-            "5" {
-                Write-Host "`n[*] Fetching Session Public State..." -ForegroundColor Yellow
-                Write-Host "------------------------------------------------------------" -ForegroundColor Gray
-                Invoke-DarkCurl "$Endpoint?public=true&application=false&write=false" -Method GET
-                Write-Host "------------------------------------------------------------" -ForegroundColor Gray
-                Read-Host "Press Enter to continue"
-            }
-            "6" {
-                Write-Host "`n"
-                $jsonData = Read-Host 'Enter JSON payload'
-                Write-Host "[*] Writing to Session Public State..." -ForegroundColor Yellow
-                Write-Host "------------------------------------------------------------" -ForegroundColor Gray
-                Invoke-DarkCurl "$Endpoint?public=true&application=false&write=true" -Method POST -Data $jsonData
-                Write-Host "------------------------------------------------------------" -ForegroundColor Gray
-                Read-Host "Press Enter to continue"
-            }
-            "7" {
-                Write-Host "`n[*] Fetching Session Private State..." -ForegroundColor Yellow
-                Write-Host "------------------------------------------------------------" -ForegroundColor Gray
-                Invoke-DarkCurl "$Endpoint?public=false&application=false&write=false" -Method GET
-                Write-Host "------------------------------------------------------------" -ForegroundColor Gray
-                Read-Host "Press Enter to continue"
-            }
-            "8" {
-                Write-Host "`n"
-                $jsonData = Read-Host 'Enter JSON payload'
-                Write-Host "[*] Writing to Session Private State..." -ForegroundColor Yellow
-                Write-Host "------------------------------------------------------------" -ForegroundColor Gray
-                Invoke-DarkCurl "$Endpoint?public=false&application=false&write=true" -Method POST -Data $jsonData
-                Write-Host "------------------------------------------------------------" -ForegroundColor Gray
-                Read-Host "Press Enter to continue"
-            }
-            "9" {
-                return
-            }
-            default {
-                Write-Host "[!] Invalid option. Please select 1-9." -ForegroundColor Red
-                Start-Sleep -Seconds 1
-            }
-        }
-    }
+if ($FailedFiles.Count -gt 0) {
+    Write-Error "[FATAL] Missing required files: $($FailedFiles -join ', ')"
+    return
 }
 
-# Set global aliases
-Set-Alias -Name dcurl -Value Invoke-DarkCurl -Scope Global -Force
-Set-Alias -Name dmenu -Value Invoke-DarkMenu -Scope Global -Force
+$ScriptPath = Join-Path $TargetModuleRoot "darkcom2.ps1"
 
-Write-Host ""
-Write-Host "[SUCCESS] Dark-Com-2 suite installed successfully!" -ForegroundColor Green
-Write-Host "Launching dcurl.ps1 immediately..." -ForegroundColor Yellow
-Write-Host ""
+if (-not (Test-Path $ScriptPath)) {
+    Write-Error "[FATAL] darkcom2.ps1 was not installed."
+    return
+}
 
-# 7. Auto-run the deployed dcurl.ps1 script
-$PsScriptPath = Join-Path $TargetDirectory "dcurl.ps1"
-if (Test-Path $PsScriptPath) {
-    & $PsScriptPath
-} else {
-    Write-Error "[ERROR] Could not locate deployed dcurl.ps1 at $PsScriptPath"
+Write-Host "[INFO] Loading darkcom2.ps1 interface into current PowerShell session..." -ForegroundColor Yellow
+
+try {
+    . $ScriptPath
+
+    Write-Host ""
+    Write-Host "[SUCCESS] Dark-Com-2 Engine Pipeline successfully loaded!" -ForegroundColor Green
+    Write-Host "Directory Path: $TargetModuleRoot" -ForegroundColor White
+    Write-Host ""
+}
+catch {
+    Write-Error "[FATAL] Failed to execute script path context layout: $($_.Exception.Message)"
 }

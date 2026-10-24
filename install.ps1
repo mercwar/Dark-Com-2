@@ -2,19 +2,39 @@
 param()
 
 $ErrorActionPreference = "Stop"
-# Force PowerShell to hide the heavy default blue progress rendering overlay
 $ProgressPreference = "SilentlyContinue"
 
-# Enable ANSI escape processing in modern Windows terminals
+# Enable ANSI escape processing
 $e = [char]27
 $ESC = "$e"
 
 Clear-Host
-Write-Host "$ESC[96m=====================================================================$ESC[0m"
-Write-Host "$ESC[96m Dark-Com-2 Engine Global PowerShell Installer                       $ESC[0m"
-Write-Host "$ESC[96m=====================================================================$ESC[0m"
-Write-Host ""
 
+# ============================================================================
+# MERCWAR AI BANNER (SAFE ESCAPED CHARACTER MAP)
+# ============================================================================
+# Construct character glyphs using Unicode hex values to prevent encoding errors
+$b1 = [char]0x2588 # █
+$b2 = [char]0x2557 # ╗
+$b3 = [char]0x2551 # ║
+$b4 = [char]0x2550 # ═
+$b5 = [char]0x2554 # ╔
+$b6 = [char]0x255A # ╚
+$b7 = [char]0x255D # ╝
+
+Write-Host "$ESC[38;2;255;69;0m  =======================================================================$ESC[0m"
+Write-Host "$ESC[38;2;255;36;0m  __  __ _____ ____   ____ __        __    _     ____       _    ___  $ESC[0m"
+Write-Host "$ESC[38;2;255;94;0m |  \/  | ____|  _ \ / ___|\ \      / /   / \   |  _ \     / \   |_ _| $ESC[0m"
+Write-Host "$ESC[38;2;255;140;0m | |\/| |  _| | |_) | |     \ \ /\ / /   / _ \  | |_) |   / _ \   | |  $ESC[0m"
+Write-Host "$ESC[38;2;255;180;0m | |  | | |___|  _ <| |___   \ V  V /   / ___ \ |  _ <   / ___ \  | |  $ESC[0m"
+Write-Host "$ESC[38;2;255;220;0m |_|  |_|_____|_| \_\\____|   \_/\_/   /_/   \_\|_| \_\ /_/   \_\___| $ESC[0m"
+Write-Host "$ESC[38;2;255;69;0m  =======================================================================$ESC[0m"
+Write-Host "$ESC[38;2;0;242;255m               [ A R T I F I C I A L   I N T E L L I G E N C E ]       $ESC[0m"
+Write-Host "$ESC[38;2;255;69;0m  =====================================================================$ESC[0m"
+Write-Host ""
+Write-Host "$ESC[96m  Dark-Com-2 Engine Public PowerShell Installer                       $ESC[0m"
+Write-Host ""
+Write-Host "$ESC[38;2;255;69;0m  ---------------------------------------------------------------------$ESC[0m"
 try {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 } catch {}
@@ -61,7 +81,7 @@ $FilesToDownload = @(
 Write-Host "$ESC[94m[INFO] Installing...$ESC[0m"
 Write-Host ""
 
-# Helper function to paint a modern flat block progress bar safely inline
+# Progress bar helper using safe character codes
 function Update-ProgressBar {
     param (
         [int]$Current,
@@ -73,14 +93,12 @@ function Update-ProgressBar {
     $FilledWidth = [Math]::Floor(($Percent / 100) * $Width)
     $UnfilledWidth = $Width - $FilledWidth
     
-    # Character maps: Solid block (█) and light shade track (░)
-    $FilledBlock = [char]9608
-    $UnfilledBlock = [char]9617
+    # Safe character maps: Solid block (0x2588) and light shade (0x2591)
+    $FilledBlock = [char]0x2588
+    $UnfilledBlock = [char]0x2591
     
     $Bar = ("$FilledBlock" * $FilledWidth) + ("$UnfilledBlock" * $UnfilledWidth)
     
-    # [FIX] Explicitly force the cursor to Column 0 and clear everything to the right ($ESC[K) 
-    # to wipe out old text from previous runs or overlapping filenames.
     $PrintStr = "$ESC[G$ESC[K$ESC[90m[$ESC[96m$Bar$ESC[90m] $ESC[97m$Percent% $ESC[90m| Deploying: $ESC[38;5;111m$FileName$ESC[0m"
     [Console]::Write($PrintStr)
 }
@@ -89,7 +107,6 @@ $FailedFiles = @()
 $TotalFiles = $FilesToDownload.Count
 $CurrentIndex = 0
 
-# Initial baseline render of the track
 Update-ProgressBar -Current 0 -Total $TotalFiles -FileName "Initializing ..."
 
 foreach ($File in $FilesToDownload) {
@@ -97,7 +114,6 @@ foreach ($File in $FilesToDownload) {
     $CurrentIndex++
 
     try {
-        # Smoothly advance the bar frame context for the asset
         Update-ProgressBar -Current $CurrentIndex -Total $TotalFiles -FileName $File.Name
 
         Invoke-WebRequest `
@@ -123,7 +139,6 @@ foreach ($File in $FilesToDownload) {
     }
 }
 
-# Finalize the progress line to 100% cleanly
 Update-ProgressBar -Current $TotalFiles -Total $TotalFiles -FileName "Deployment Layout Ready"
 Write-Host "`n"
 
@@ -135,10 +150,10 @@ if ($FailedFiles.Count -gt 0) {
 $ScriptPath = ".\darkcom2.ps1"
 $BatPath = ".\darkcom2.bat"
 
-Write-Host "[SUCCESS] Dark-Com-2 installation successfully.`n" -ForegroundColor Green
+Write-Host "[SUCCESS] Dark-Com-2 installation completed successfully.`n" -ForegroundColor Green
 
 # ============================================================================
-# INTERACTIVE KEYBOARD-DRIVEN MENU SELECTION (FIXED RENDERING)
+# INTERACTIVE KEYBOARD-DRIVEN MENU SELECTION
 # ============================================================================
 
 $MenuOptions = @(
@@ -149,7 +164,6 @@ $MenuOptions = @(
 $Selection = 0
 $Running = $true
 
-# Hide terminal cursor while browsing the selection list
 [Console]::CursorVisible = $false
 
 Write-Host "$ESC[33mEclipse will connect to the AVIS-DATALAKE for you$ESC[0m"
@@ -157,15 +171,12 @@ Write-Host "$ESC[33m-------------------------------------------------$ESC[0m"
 Write-Host ""
 Write-Host "$ESC[90mUse UP/DOWN and ENTER to load an interface:$ESC[0m`n"
 
-# Capture the baseline starting line for absolute cursor placement
 $StartTop = [Console]::CursorTop
 
 while ($Running) {
-    # Jump back to the exact menu rendering anchor point
     [Console]::SetCursorPosition(0, $StartTop)
     
     for ($i = 0; $i -lt $MenuOptions.Count; $i++) {
-        # [FIX] Added $ESC[K to clear line trailing background artifacts/bleed
         if ($i -eq $Selection) {
             [Console]::Write("$ESC[30;103m  > [X] $($MenuOptions[$i])  $ESC[0m$ESC[K`n")
         } else {
@@ -186,11 +197,9 @@ while ($Running) {
     }
 }
 
-# Restore default console visibility properties
 [Console]::CursorVisible = $true
 Clear-Host
 
-# Process branch targets based on final menu coordinate selection context
 if ($Selection -eq 0) {
     Write-Host "$ESC[93m[INFO] Loading Eclipse...$ESC[0m"
     if (Test-Path $BatPath) {

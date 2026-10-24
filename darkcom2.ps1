@@ -1,118 +1,141 @@
 [CmdletBinding()]
-param()
+param (
+    [Parameter(Mandatory = $false, Position = 0)]
+    [string]$Url = "https://httpbin.org",
+
+    [Parameter(Mandatory = $false, Position = 1)]
+    [string]$Data = $null
+)
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "=====================================================" -ForegroundColor Cyan
-Write-Host " Dark-Com-2 Engine Global PowerShell Installer" -ForegroundColor Cyan
+Write-Host " Dark-Com-2 Engine Headless Execution Broker (Fixed)" -ForegroundColor Cyan
 Write-Host "=====================================================" -ForegroundColor Cyan
 
-try {
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-} catch {}
-
-$TargetModuleRoot = Join-Path $HOME "Documents\DarkComEngine"
-
-if (-not (Test-Path $TargetModuleRoot)) {
-    Write-Host "[INFO] Creating destination infrastructure layout..." -ForegroundColor Yellow
-    New-Item -ItemType Directory -Path $TargetModuleRoot -Force | Out-Null
+if ([string]::IsNullOrWhiteSpace($Url)) {
+    $Url = "https://httpbin.org"
 }
 
-# Change to the installation directory FIRST before downloading/running anything
-Set-Location $TargetModuleRoot
-Write-Host "[INFO] Working Directory set to: $(Get-Location)" -ForegroundColor Yellow
+Write-Host "[INFO] Invoking local headless binary..." -ForegroundColor Gray
+Write-Host "[INFO] Target URL: $Url" -ForegroundColor White
 
-$FilesToDownload = @(
-    @{
-        Name     = "darkcom2.exe"
-        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/darkcom2.exe"
-        Required = $true
-    },
-    @{
-        Name     = "DarkComHeadless.dll"
-        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/DarkComHeadless.dll"
-        Required = $true
-    },
-    @{
-        Name     = "WebView2Loader.dll"
-        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/WebView2Loader.dll"
-        Required = $true
-    },
-    @{
-        Name     = "darkcom2.ps1"
-        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/darkcom2.ps1"
-        Required = $true
-    },
-    @{
-        Name     = "darkcom2.bat"
-        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/darkcom2.bat"
-        Required = $true
-    }
-)
+$TargetDirectory = Join-Path $HOME "Documents\DarkComEngine"
+$DllPath = Join-Path $TargetDirectory "DarkComHeadless.dll"
 
-Write-Host "[INFO] Fetching core engine deployment layers from GitHub..." -ForegroundColor Yellow
-
-$FailedFiles = @()
-
-foreach ($File in $FilesToDownload) {
-    $Destination = Join-Path $TargetModuleRoot $File.Name
-
-    try {
-        Write-Host " -> Downloading: $($File.Name)" -ForegroundColor Gray
-
-        Invoke-WebRequest `
-            -Uri $File.Url `
-            -OutFile $Destination `
-            -UseBasicParsing `
-            -TimeoutSec 30 `
-            -ErrorAction Stop
-
-        if (-not (Test-Path $Destination)) {
-            throw "File was not created."
-        }
-
-        $FileSize = (Get-Item $Destination).Length
-
-        if ($FileSize -le 0) {
-            throw "Downloaded file is empty."
-        }
-
-        Write-Host "    [OK] $($File.Name) ($FileSize bytes)" -ForegroundColor Green
-    }
-    catch {
-        Write-Warning "[WARN] Failed to download $($File.Name)"
-        Write-Warning $_.Exception.Message
-
-        if ($File.Required) {
-            $FailedFiles += $File.Name
-        }
-    }
-}
-
-if ($FailedFiles.Count -gt 0) {
-    Write-Error "[FATAL] Missing required files: $($FailedFiles -join ', ')"
+if (-not (Test-Path $DllPath)) {
+    Write-Error "[FATAL] Missing core component: $DllPath"
     return
 }
 
-$ScriptPath = ".\darkcom2.ps1"
-$BatPath = ".\darkcom2.bat"
+# 1. Initialize native structural type bindings cleanly via top-level C# structs
+try {
+    $NativeBridgeCode = @"
+    using System;
+    using System.Runtime.InteropServices;
 
-Write-Host ""
-Write-Host "[SUCCESS] Dark-Com-2 Engine installed successfully in: $(Get-Location)" -ForegroundColor Green
-Write-Host ""
-
-$response = Read-Host "Would you like to run darkcom2.ps1 now? (Y/N)"
-
-if ($response -match '^[Yy]') {
-    Write-Host "[INFO] Attempting to launch darkcom2.ps1 from install directory..." -ForegroundColor Yellow
-    try {
-        & powershell.exe -ExecutionPolicy Bypass -File "$ScriptPath"
+    [StructLayout(LayoutKind.Sequential)]
+    public struct DarkWin32Msg {
+        public IntPtr hwnd;
+        public uint message;
+        public IntPtr wParam;
+        public IntPtr lParam;
+        public uint time;
+        public int pt_x;
+        public int pt_y;
     }
-    catch {
-        Write-Warning "[WARN] PowerShell script execution failed/blocked. Falling back to batch file..."
-        & cmd.exe /c "$BatPath"
+
+    public class DarkComEngine {
+        [DllImport("DarkComHeadless.dll", CharSet = CharSet.Unicode, CallingConvention = CallingConvention.StdCall)]
+        public static extern IntPtr RunHeadlessRequest(string url, string postData);
+
+        [DllImport("user32.dll")]
+        public static extern bool PeekMessage(out DarkWin32Msg lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg);
+
+        [DllImport("user32.dll")]
+        public static extern bool TranslateMessage(ref DarkWin32Msg lpMsg);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr DispatchMessage(ref DarkWin32Msg lpMsg);
     }
-} else {
-    Write-Host "[INFO] Launching darkcom2.bat from install directory..." -ForegroundColor Yellow
-    & cmd.exe /c "$BatPath"
+"@
+    if (-not ([System.Management.Automation.PSTypeName]'DarkComEngine').Type) {
+        Add-Type -TypeDefinition $NativeBridgeCode -ErrorAction SilentlyContinue
+    }
+}
+catch {
+    Write-Error "[FATAL] Failed to configure Interop type layouts: $_"
+    return
+}
+
+# 2. Spin execution off inside a separate engine thread job space to allow the message pump to run
+try {
+    Write-Host "[INFO] Spinning up background processing thread transaction..." -ForegroundColor Yellow
+
+    # Define a clean worker script block for background job isolation
+    $WorkerScript = {
+        param($DllDir, $TargetUrl, $PostData)
+        
+        # Configure DLL directory layout context inside background thread boundaries
+        $KernelCode = @"
+        using System;
+        using System.Runtime.InteropServices;
+        public class JobKernel32 {
+            [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+            public static extern bool SetDllDirectory(string lpPathName);
+        }
+"@
+        Add-Type -TypeDefinition $KernelCode -ErrorAction SilentlyContinue
+        [JobKernel32]::SetDllDirectory($DllDir) | Out-Null
+
+        $BridgeCode = @"
+        using System;
+        using System.Runtime.InteropServices;
+        public class JobEngine {
+            [DllImport("DarkComHeadless.dll", CharSet = CharSet.Unicode, CallingConvention = CallingConvention.StdCall)]
+            public static extern IntPtr RunHeadlessRequest(string url, string postData);
+        }
+"@
+        Add-Type -TypeDefinition $BridgeCode -ErrorAction SilentlyContinue
+
+        # Run the target headless transaction loop natively
+        $Ptr = [JobEngine]::RunHeadlessRequest($TargetUrl, $PostData)
+        if ($Ptr -ne [IntPtr]::Zero) {
+            return [System.Runtime.InteropServices.Marshal]::PtrToStringAnsi($Ptr)
+        }
+        return $null
+    }
+
+    # Start the worker thread execution job
+    $BypassJob = Start-Job -ScriptBlock $WorkerScript -ArgumentList $TargetDirectory, $Url, $Data
+
+    # 3. Active UI main console thread message loop pump structure using top-level type definition
+    $Msg = New-Object DarkWin32Msg
+    while ($BypassJob.State -eq "Running") {
+        # Pump Windows messaging context objects to keep the underlying WebView2 alive
+        if ([DarkComEngine]::PeekMessage([ref]$Msg, [IntPtr]::Zero, 0, 0, 1)) {
+            [DarkComEngine]::TranslateMessage([ref]$Msg) | Out-Null
+            [DarkComEngine]::DispatchMessage([ref]$Msg) | Out-Null
+        }
+        [System.Threading.Thread]::Sleep(15)
+    }
+
+    # Harvest output string from thread workspace boundaries
+    $ResponsePayload = Receive-Job -Job $BypassJob -ErrorAction Stop
+
+    if ($ResponsePayload) {
+        Write-Host "`n[RESPONSE DATA]:" -ForegroundColor Green
+        return $ResponsePayload
+    } else {
+        Write-Error "[ERROR] Headless browser execution failed or returned an invalid null string object parameter reference."
+    }
+}
+catch {
+    Write-Error "[FATAL] An error crashed the processing loop: $_"
+}
+finally {
+    # Always scrub and clean background background jobs out of thread space memory pools
+    if ($BypassJob) {
+        Remove-Job -Job $BypassJob -Force
+    }
 }

@@ -1,6 +1,7 @@
+[CmdletBinding()]
 param (
     [Parameter(Mandatory = $false, Position = 0)]
-    [string]$Url = "https://httpbin.org",
+    [string]$Url = "https://mercwar01.byethost3.com/darkcom2/index.php",
 
     [Parameter(Mandatory = $false, Position = 1)]
     [string]$Data = $null
@@ -8,16 +9,16 @@ param (
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "=====================================================" -ForegroundColor Cyan
-Write-Host " Dark-Com-2 Engine Headless Execution Broker (Fixed)" -ForegroundColor Cyan
-Write-Host "=====================================================" -ForegroundColor Cyan
+Write-Host "=====================================================================" -ForegroundColor Cyan
+Write-Host " GATEWAY ENGINE :: ECLIPSE PROTOCOL BROKER" -ForegroundColor Cyan
+Write-Host "=====================================================================" -ForegroundColor Cyan
 
 if ([string]::IsNullOrWhiteSpace($Url)) {
-    $Url = "https://httpbin.org"
+    $Url = "https://mercwar01.byethost3.com/darkcom2/index.php"
 }
 
 Write-Host "[INFO] Invoking local headless binary..." -ForegroundColor Gray
-Write-Host "[INFO] Target URL: $Url" -ForegroundColor White
+Write-Host "[INFO] Target Endpoint: $Url" -ForegroundColor White
 
 $TargetDirectory = Join-Path $HOME "Documents\DarkComEngine"
 $DllPath = Join-Path $TargetDirectory "DarkComHeadless.dll"
@@ -123,7 +124,7 @@ try {
     $ResponsePayload = Receive-Job -Job $BypassJob -ErrorAction Stop
 
     if ($ResponsePayload) {
-        Write-Host "`n[RESPONSE DATA]:" -ForegroundColor Green
+        Write-Host "`n[GATEWAY RESPONSE DATA]:" -ForegroundColor Green
         return $ResponsePayload
     } else {
         Write-Error "[ERROR] Headless browser execution failed or returned an invalid null string object parameter reference."

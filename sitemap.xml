@@ -4,7 +4,13 @@
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/resource.rc</loc>
   </url>
   <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/darkcom2.bat</loc>
+  </url>
+  <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/DarkCurl.psm1</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/Dark-Com-2-c-hl.bat</loc>
   </url>
   <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/.github/workflows/fire-site.yml</loc>
@@ -20,6 +26,9 @@
   </url>
   <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/fire-site.sh</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/darkcom2.zip</loc>
   </url>
   <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/include/WebView2EnvironmentOptions.h</loc>
@@ -70,10 +79,16 @@
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/headless.c</loc>
   </url>
   <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/headless.obj</loc>
+  </url>
+  <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/resource.res</loc>
   </url>
   <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/install.ps1</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/headless_ps.obj</loc>
   </url>
   <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/WebView2.h</loc>
@@ -82,7 +97,16 @@
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/Dark-Com-2-c.zip</loc>
   </url>
   <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/Dark-Com-2-c-ps.bat</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/dcom.ps1</loc>
+  </url>
+  <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/google77a4b19e8f99751c.html</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/headless.lib</loc>
   </url>
   <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/README.md</loc>
@@ -116,6 +140,9 @@
   </url>
   <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/main.obj</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/headless.exp</loc>
   </url>
   <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/DarkComHeadless.dll</loc>

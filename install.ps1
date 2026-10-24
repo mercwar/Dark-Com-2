@@ -4,7 +4,7 @@ param()
 $ErrorActionPreference = "Stop"
 
 Write-Host "=====================================================" -ForegroundColor Cyan
-Write-Host " Dark-Com-2 Engine Module Global PowerShell Installer" -ForegroundColor Cyan
+Write-Host " Dark-Com-2 Engine Global PowerShell Installer" -ForegroundColor Cyan
 Write-Host "=====================================================" -ForegroundColor Cyan
 
 try {

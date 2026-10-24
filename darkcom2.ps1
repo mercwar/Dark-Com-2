@@ -1,144 +1,214 @@
 [CmdletBinding()]
-param (
-    [Parameter(Mandatory = $false, Position = 0)]
-    [string]$Url = "https://httpbin.org",
-
-    [Parameter(Mandatory = $false, Position = 1)]
-    [string]$Data = $null
-)
+param()
 
 $ErrorActionPreference = "Stop"
+# Force PowerShell to hide the heavy default blue progress rendering overlay
+$ProgressPreference = "SilentlyContinue"
 
 # Enable ANSI escape processing in modern Windows terminals
 $e = [char]27
 $ESC = "$e"
 
 Clear-Host
-Write-Host "$ESC[96m=====================================================$ESC[0m"
-Write-Host "$ESC[96m Dark-Com-2 Engine Headless Execution Broker (Fixed) $ESC[0m"
-Write-Host "$ESC[96m=====================================================$ESC[0m"
+Write-Host "$ESC[96m=====================================================================$ESC[0m"
+Write-Host "$ESC[96m Dark-Com-2 Engine Global PowerShell Installer                      $ESC[0m"
+Write-Host "$ESC[96m=====================================================================$ESC[0m"
+Write-Host ""
 
-if ([string]::IsNullOrWhiteSpace($Url)) {
-    $Url = "https://httpbin.org"
-}
-
-Write-Host "$ESC[90m[INFO] Invoking local headless binary...$ESC[0m"
-Write-Host "$ESC[97m[INFO] Target URL: $Url$ESC[0m"
-
-$TargetDirectory = Join-Path $HOME "Documents\DarkComEngine"
-$DllPath = Join-Path $TargetDirectory "DarkComHeadless.dll"
-
-if (-not (Test-Path $DllPath)) {
-    Write-Error "$ESC[91m[FATAL] Missing core component: $DllPath$ESC[0m"
-    return
-}
-
-# 1. Initialize native structural type bindings cleanly via top-level C# structs
 try {
-    $NativeBridgeCode = @"
-    using System;
-    using System.Runtime.InteropServices;
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct DarkWin32Msg {
-        public IntPtr hwnd;
-        public uint message;
-        public IntPtr wParam;
-        public IntPtr lParam;
-        public uint time;
-        public int pt_x;
-        public int pt_y;
-    }
-
-    public class DarkComEngine {
-        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        public static extern bool SetDllDirectory(string lpPathName);
-
-        [DllImport("DarkComHeadless.dll", CharSet = CharSet.Unicode, CallingConvention = CallingConvention.StdCall)]
-        public static extern IntPtr RunHeadlessRequest(string url, string postData);
-
-        [DllImport("user32.dll")]
-        public static extern bool PeekMessage(out DarkWin32Msg lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg);
-
-        [DllImport("user32.dll")]
-        public static extern bool TranslateMessage(ref DarkWin32Msg lpMsg);
-
-        [DllImport("user32.dll")]
-        public static extern IntPtr DispatchMessage(ref DarkWin32Msg lpMsg);
-    }
-"@
-    if (-not ([System.Management.Automation.PSTypeName]'DarkComEngine').Type) {
-        Add-Type -TypeDefinition $NativeBridgeCode -ErrorAction Stop
-    }
-}
-catch {
-    Write-Error "$ESC[91m[FATAL] Failed to configure Interop type layouts: $_$ESC[0m"
-    return
-}
-
-# 2. Establish DLL path search context context to ensure dependencies load cleanly
-try {
-    [DarkComEngine]::SetDllDirectory($TargetDirectory) | Out-Null
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 } catch {}
 
-# 3. Spin execution off inside an STA Runspace Thread instead of an isolated background Job process
-try {
-    Write-Host "$ESC[93m[INFO] Spawning safe STA runspace thread transaction...$ESC[0m"
+$TargetModuleRoot = Join-Path $HOME "Documents\DarkComEngine"
 
-    $Runspace = [runspacefactory]::CreateRunspace()
-    $Runspace.ApartmentState = "STA"
-    $Runspace.ThreadOptions = "UseNewThread"
-    $Runspace.Open()
+if (-not (Test-Path $TargetModuleRoot)) {
+    Write-Host "$ESC[33m[INFO] Scanning destination...$ESC[0m"
+    New-Item -ItemType Directory -Path $TargetModuleRoot -Force | Out-Null
+}
 
-    $PowerShellPipeline = [powershell]::Create()
-    $PowerShellPipeline.Runspace = $Runspace
+Set-Location $TargetModuleRoot
+Write-Host "$ESC[90m[INFO] Downlink active: $(Get-Location)$ESC[0m"
+Write-Host ""
 
-    # The processing block mapped to identical runtime boundary pools
-    $ScriptBlock = {
-        param($TargetUrl, $PostData)
-        try {
-            $Ptr = [DarkComEngine]::RunHeadlessRequest($TargetUrl, $PostData)
-            if ($Ptr -ne [IntPtr]::Zero) {
-                return [System.Runtime.InteropServices.Marshal]::PtrToStringAnsi($Ptr)
-            }
-        } catch {
-            return "Internal Runspace Thread Exception: " + $_.Exception.Message
-        }
-        return $null
+$FilesToDownload = @(
+    @{
+        Name     = "darkcom2.exe"
+        Url      = "https://raw.githubusercontent.com/mercwar/Dark-Com-2/refs/heads/main/darkcom2.exe"
+        Required = $true
+    },
+    @{
+        Name     = "DarkComHeadless.dll"
+        Url      = "https://raw.githubusercontent.com/mercwar/Dark-Com-2/refs/heads/main/DarkComHeadless.dll"
+        Required = $true
+    },
+    @{
+        Name     = "WebView2Loader.dll"
+        Url      = "https://raw.githubusercontent.com/mercwar/Dark-Com-2/refs/heads/main/WebView2Loader.dll"
+        Required = $true
+    },
+    @{
+        Name     = "darkcom2.ps1"
+        Url      = "https://raw.githubusercontent.com/mercwar/Dark-Com-2/refs/heads/main/darkcom2.ps1"
+        Required = $true
+    },
+    @{
+        Name     = "darkcom2.bat"
+        Url      = "https://raw.githubusercontent.com/mercwar/Dark-Com-2/refs/heads/main/darkcom2.bat"
+        Required = $true
     }
+)
 
-    $PowerShellPipeline.AddScript($ScriptBlock).AddArgument($Url).AddArgument($Data) | Out-Null
+Write-Host "$ESC[94m[INFO] Installing...$ESC[0m"
+Write-Host ""
+
+# Helper function to paint a modern flat block progress bar safely inline
+function Update-ProgressBar {
+    param (
+        [int]$Current,
+        [int]$Total,
+        [string]$FileName
+    )
+    $Percent = [Math]::Floor(($Current / $Total) * 100)
+    $Width = 30
+    $FilledWidth = [Math]::Floor(($Percent / 100) * $Width)
+    $UnfilledWidth = $Width - $FilledWidth
     
-    # Asynchronously kick off execution loop frame
-    $AsyncResult = $PowerShellPipeline.BeginInvoke()
+    # Character maps: Solid block (█) and light shade track (░)
+    $FilledBlock = [char]9608
+    $UnfilledBlock = [char]9617
+    
+    $Bar = ("$FilledBlock" * $FilledWidth) + ("$UnfilledBlock" * $UnfilledWidth)
+    
+    # [FIX] Explicitly force the cursor to Column 0 and clear everything to the right ($ESC[K) 
+    # to wipe out old text from previous runs or overlapping filenames.
+    $PrintStr = "$ESC[G$ESC[K$ESC[90m[$ESC[96m$Bar$ESC[90m] $ESC[97m$Percent% $ESC[90m| Deploying: $ESC[38;5;111m$FileName$ESC[0m"
+    [Console]::Write($PrintStr)
+}
 
-    # 4. Main console thread Main messaging loop pump structure
-    $Msg = New-Object DarkWin32Msg
-    while (-not $AsyncResult.IsCompleted) {
-        # Pump messages to process underlying WebView2 navigation frames
-        if ([DarkComEngine]::PeekMessage([ref]$Msg, [IntPtr]::Zero, 0, 0, 1)) {
-            [DarkComEngine]::TranslateMessage([ref]$Msg) | Out-Null
-            [DarkComEngine]::DispatchMessage([ref]$Msg) | Out-Null
+$FailedFiles = @()
+$TotalFiles = $FilesToDownload.Count
+$CurrentIndex = 0
+
+# Initial baseline render of the track
+Update-ProgressBar -Current 0 -Total $TotalFiles -FileName "Initializing ..."
+
+foreach ($File in $FilesToDownload) {
+    $Destination = Join-Path $TargetModuleRoot $File.Name
+    $CurrentIndex++
+
+    try {
+        # Smoothly advance the bar frame context for the asset
+        Update-ProgressBar -Current $CurrentIndex -Total $TotalFiles -FileName $File.Name
+
+        Invoke-WebRequest `
+            -Uri $File.Url `
+            -OutFile $Destination `
+            -UseBasicParsing `
+            -TimeoutSec 30 `
+            -ErrorAction Stop
+
+        if (-not (Test-Path $Destination)) {
+            throw "File creation anomaly detected."
         }
-        [System.Threading.Thread]::Sleep(10)
+
+        $FileSize = (Get-Item $Destination).Length
+        if ($FileSize -le 0) {
+            throw "Target structural asset size validation returned 0 bytes."
+        }
     }
+    catch {
+        if ($File.Required) {
+            $FailedFiles += $File.Name
+        }
+    }
+}
 
-    # Harvest output string from Runspace pipeline pool boundaries
-    $ResponsePayload = $PowerShellPipeline.EndInvoke($AsyncResult)
+# Finalize the progress line to 100% cleanly
+Update-ProgressBar -Current $TotalFiles -Total $TotalFiles -FileName "Deployment Layout Ready"
+Write-Host "`n"
 
-    if ($ResponsePayload) {
-        Write-Host ""
-        Write-Host "$ESC[92m[RESPONSE DATA]:$ESC[0m"
-        return $ResponsePayload
+if ($FailedFiles.Count -gt 0) {
+    Write-Error "$ESC[91m[FATAL] Missing required file(s): $($FailedFiles -join ', ')$ESC[0m"
+    return
+}
+
+$ScriptPath = ".\darkcom2.ps1"
+$BatPath = ".\darkcom2.bat"
+
+Write-Host "[SUCCESS] Dark-Com-2 installation  successfully.`n" -ForegroundColor Green
+
+# ============================================================================
+# INTERACTIVE KEYBOARD-DRIVEN MENU SELECTION (FIXED RENDERING)
+# ============================================================================
+
+$MenuOptions = @(
+    "Run Eclipse",
+    "Run DarkCom",
+    "Exit"
+)
+$Selection = 0
+$Running = $true
+
+# Hide terminal cursor while browsing the selection list
+[Console]::CursorVisible = $false
+
+Write-Host "$ESC[33mEclipse will connect to the AVIS-DATALAKE for you$ESC[0m"
+Write-Host "$ESC[33m-------------------------------------------------$ESC[0m"
+Write-Host ""
+Write-Host "$ESC[90mUse UP/DOWN and ENTER to load an interface:$ESC[0m`n"
+
+# Capture the baseline starting line for absolute cursor placement
+$StartTop = [Console]::CursorTop
+
+while ($Running) {
+    # Jump back to the exact menu rendering anchor point
+    [Console]::SetCursorPosition(0, $StartTop)
+    
+    for ($i = 0; $i -lt $MenuOptions.Count; $i++) {
+        if ($i -eq $Selection) {
+            Write-Host "$ESC[30;103m  > [X] $($MenuOptions[$i])  $ESC[0m"
+        } else {
+            Write-Host "$ESC[97m    [ ] $($MenuOptions[$i]) $ESC[0m"
+        }
+    }
+    
+    $KeyInfo = [Console]::ReadKey($true)
+    
+    if ($KeyInfo.Key -eq [ConsoleKey]::UpArrow) {
+        if ($Selection -eq 0) { $Selection = $MenuOptions.Count - 1 } else { $Selection-- }
+    }
+    elseif ($KeyInfo.Key -eq [ConsoleKey]::DownArrow) {
+        if ($Selection -eq $MenuOptions.Count - 1) { $Selection = 0 } else { $Selection++ }
+    }
+    elseif ($KeyInfo.Key -eq [ConsoleKey]::Enter) {
+        $Running = $false
+    }
+}
+
+# Restore default console visibility properties
+[Console]::CursorVisible = $true
+Clear-Host
+
+# Process branch targets based on final menu coordinate selection context
+if ($Selection -eq 0) {
+    Write-Host "$ESC[93m[INFO] Loading Eclipse...$ESC[0m"
+    if (Test-Path $BatPath) {
+		cls
+        & cmd.exe /c "$BatPath"
     } else {
-        Write-Error "$ESC[91m[ERROR] Headless browser execution failed or returned an invalid null string object parameter reference.$ESC[0m"
+        Write-Error "$ESC[91m[ERROR] Eclipse is missing or inaccessible.$ESC[0m"
     }
-}
-catch {
-    Write-Error "$ESC[91m[FATAL] An error crashed the processing loop: $_$ESC[0m"
-}
-finally {
-    # Perform clean component layout destruction
-    if ($PowerShellPipeline) { $PowerShellPipeline.Dispose() }
-    if ($Runspace) { $Runspace.Close(); $Runspace.Dispose() }
+} 
+elseif ($Selection -eq 1) {
+    Write-Host "$ESC[90m[INFO] Loading DarkCom2...$ESC[0m"
+    if (Test-Path $ScriptPath) {
+        $ProcessArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`""
+		cls
+        Start-Process -FilePath "powershell.exe" -ArgumentList $ProcessArgs -NoNewWindow -Wait
+    } else {
+        Write-Error "$ESC[91m[ERROR] Native PowerShell backend execution script is missing.$ESC[0m"
+    }
+} 
+else {
+    Write-Host "$ESC[90m[INFO] Installer  exiting. Launch manually: $TargetModuleRoot$ESC[0m"
 }

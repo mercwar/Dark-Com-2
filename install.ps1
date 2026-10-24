@@ -3,15 +3,9 @@ param()
 
 $ErrorActionPreference = "Stop"
 
-# Enable ANSI escape processing in modern Windows terminals
-$e = [char]27
-$ESC = "$e"
-
-Clear-Host
-Write-Host "$ESC[96m=====================================================================$ESC[0m"
-Write-Host "$ESC[96m Dark-Com-2 Engine Global PowerShell Installer                      $ESC[0m"
-Write-Host "$ESC[96m=====================================================================$ESC[0m"
-Write-Host ""
+Write-Host "=====================================================" -ForegroundColor Cyan
+Write-Host " Dark-Com-2 Engine Global PowerShell Installer" -ForegroundColor Cyan
+Write-Host "=====================================================" -ForegroundColor Cyan
 
 try {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -20,18 +14,18 @@ try {
 $TargetModuleRoot = Join-Path $HOME "Documents\DarkComEngine"
 
 if (-not (Test-Path $TargetModuleRoot)) {
-    Write-Host "$ESC[33m[INFO] Creating destination infrastructure layout...$ESC[0m"
+    Write-Host "[INFO] Creating destination infrastructure layout..." -ForegroundColor Yellow
     New-Item -ItemType Directory -Path $TargetModuleRoot -Force | Out-Null
 }
 
+# Change to the installation directory FIRST before downloading/running anything
 Set-Location $TargetModuleRoot
-Write-Host "$ESC[90m[INFO] Working Directory set to: $(Get-Location)$ESC[0m"
-Write-Host ""
+Write-Host "[INFO] Working Directory set to: $(Get-Location)" -ForegroundColor Yellow
 
 $FilesToDownload = @(
     @{
         Name     = "darkcom2.exe"
-        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/darkcom2.exe"
+        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/"
         Required = $true
     },
     @{
@@ -56,29 +50,16 @@ $FilesToDownload = @(
     }
 )
 
-Write-Host "$ESC[96m[INFO] Fetching core engine deployment layers from GitHub...$ESC[0m"
-Write-Host ""
+Write-Host "[INFO] Fetching core engine deployment layers from GitHub..." -ForegroundColor Yellow
 
 $FailedFiles = @()
-$TotalFiles = $FilesToDownload.Count
-$CurrentIndex = 0
 
 foreach ($File in $FilesToDownload) {
-    $CurrentIndex++
     $Destination = Join-Path $TargetModuleRoot $File.Name
 
-    # Render modern smooth progress bar using ANSI colors
-    $Width = 25
-    $Percent = [Math]::Floor(($CurrentIndex / $TotalFiles) * 100)
-    $Completed = [Math]::Floor(($Width * $Percent) / 100)
-    $Remaining = $Width - $Completed
-    
-    $BarFilled = "$ESC[96m" + ('█' * $Completed) + "$ESC[0m"
-    $BarEmpty = "$ESC[90m" + ('░' * $Remaining) + "$ESC[0m"
-    
-    [Console]::Write("`r  [$BarFilled$BarEmpty] $ESC[93m$Percent%%$ESC[0m ($CurrentIndex/$TotalFiles) Downloading: $ESC[97m$($File.Name)$ESC[0m                    ")
-
     try {
+        Write-Host " -> Downloading: $($File.Name)" -ForegroundColor Gray
+
         Invoke-WebRequest `
             -Uri $File.Url `
             -OutFile $Destination `
@@ -95,18 +76,18 @@ foreach ($File in $FilesToDownload) {
         if ($FileSize -le 0) {
             throw "Downloaded file is empty."
         }
+
+        Write-Host "    [OK] $($File.Name) ($FileSize bytes)" -ForegroundColor Green
     }
     catch {
-        [Console]::Write("`n")
-        Write-Warning "[WARN] Failed to download $($File.Name): $($_.Exception.Message)"
+        Write-Warning "[WARN] Failed to download $($File.Name)"
+        Write-Warning $_.Exception.Message
+
         if ($File.Required) {
             $FailedFiles += $File.Name
         }
     }
 }
-
-Write-Host "`n"
-Write-Host "$ESC[90m=====================================================================$ESC[0m"
 
 if ($FailedFiles.Count -gt 0) {
     Write-Error "[FATAL] Missing required files: $($FailedFiles -join ', ')"
@@ -116,14 +97,14 @@ if ($FailedFiles.Count -gt 0) {
 $ScriptPath = ".\darkcom2.ps1"
 $BatPath = ".\darkcom2.bat"
 
-Write-Host "$ESC[92m[SUCCESS] Dark-Com-2 Engine installed successfully!$ESC[0m"
-Write-Host "$ESC[90mLocation: $(Get-Location)$ESC[0m"
+Write-Host ""
+Write-Host "[SUCCESS] Dark-Com-2 Engine installed successfully in: $(Get-Location)" -ForegroundColor Green
 Write-Host ""
 
-$response = Read-Host "Would you like to run Eclipse now? (Y/N)"
+$response = Read-Host "Would you like to run darkcom2.ps1 now? (Y/N)"
 
-if ($response -match '^[Nn]') {
-    Write-Host "$ESC[33m[INFO] Attempting to launch darkcom2.ps1 from install directory...$ESC[0m"
+if ($response -match '^[Yy]') {
+    Write-Host "[INFO] Attempting to launch darkcom2.ps1 from install directory..." -ForegroundColor Yellow
     try {
         & powershell.exe -ExecutionPolicy Bypass -File "$ScriptPath"
     }
@@ -132,6 +113,6 @@ if ($response -match '^[Nn]') {
         & cmd.exe /c "$BatPath"
     }
 } else {
-    Write-Host "$ESC[33m[INFO] Launching darkcom2.bat from install directory...$ESC[0m"
+    Write-Host "[INFO] Launching darkcom2.bat from install directory..." -ForegroundColor Yellow
     & cmd.exe /c "$BatPath"
 }

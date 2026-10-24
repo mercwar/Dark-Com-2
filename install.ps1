@@ -31,7 +31,7 @@ $FilesToDownload = @(
     },
     @{
         Name = "dcurl.ps1"
-        Url  = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/dcurl.ps1"
+        Url  = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/darkcom.ps1"
     }
 )
 

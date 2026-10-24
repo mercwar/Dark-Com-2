@@ -2,6 +2,8 @@
 param()
 
 $ErrorActionPreference = "Stop"
+# Force PowerShell to hide the heavy default blue progress rendering overlay
+$ProgressPreference = "SilentlyContinue"
 
 # Enable ANSI escape processing in modern Windows terminals
 $e = [char]27
@@ -31,27 +33,27 @@ Write-Host ""
 $FilesToDownload = @(
     @{
         Name     = "darkcom2.exe"
-        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/darkcom2.exe"
+        Url      = "https://raw.githubusercontent.com/mercwar/Dark-Com-2/refs/heads/main/darkcom2.exe"
         Required = $true
     },
     @{
         Name     = "DarkComHeadless.dll"
-        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/DarkComHeadless.dll"
+        Url      = "https://raw.githubusercontent.com/mercwar/Dark-Com-2/refs/heads/main/DarkComHeadless.dll"
         Required = $true
     },
     @{
         Name     = "WebView2Loader.dll"
-        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/WebView2Loader.dll"
+        Url      = "https://raw.githubusercontent.com/mercwar/Dark-Com-2/refs/heads/main/WebView2Loader.dll"
         Required = $true
     },
     @{
         Name     = "darkcom2.ps1"
-        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/darkcom2.ps1"
+        Url      = "https://raw.githubusercontent.com/mercwar/Dark-Com-2/refs/heads/main/darkcom2.ps1"
         Required = $true
     },
     @{
         Name     = "darkcom2.bat"
-        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/darkcom2.bat"
+        Url      = "https://raw.githubusercontent.com/mercwar/Dark-Com-2/refs/heads/main/darkcom2.bat"
         Required = $true
     }
 )
@@ -59,7 +61,7 @@ $FilesToDownload = @(
 Write-Host "$ESC[94m[INFO] Fetching core engine deployment layers from GitHub...$ESC[0m"
 Write-Host ""
 
-# Helper function to paint a modern flat block progress bar
+# Helper function to paint a modern flat block progress bar safely inline
 function Update-ProgressBar {
     param (
         [int]$Current,
@@ -77,8 +79,9 @@ function Update-ProgressBar {
     
     $Bar = ("$FilledBlock" * $FilledWidth) + ("$UnfilledBlock" * $UnfilledWidth)
     
-    # Modern terminal coloring: Slate blue track, bright cyan filled segment
-    $PrintStr = "$ESC[G$ESC[90m[$ESC[96m$Bar$ESC[90m] $ESC[97m$Percent% $ESC[90m| Deploying: $ESC[38;5;111m$FileName$ESC[0m"
+    # [FIX] Explicitly force the cursor to Column 0 and clear everything to the right ($ESC[K) 
+    # to wipe out old text from previous runs or overlapping filenames.
+    $PrintStr = "$ESC[G$ESC[K$ESC[90m[$ESC[96m$Bar$ESC[90m] $ESC[97m$Percent% $ESC[90m| Deploying: $ESC[38;5;111m$FileName$ESC[0m"
     [Console]::Write($PrintStr)
 }
 
@@ -132,24 +135,73 @@ if ($FailedFiles.Count -gt 0) {
 $ScriptPath = ".\darkcom2.ps1"
 $BatPath = ".\darkcom2.bat"
 
-Write-Host "[SUCCESS] Dark-Com-2 Engine infrastructure deployed successfully." -ForegroundColor Green
-Write-Host ""
+Write-Host "[SUCCESS] Dark-Com-2 Engine infrastructure deployed successfully.`n" -ForegroundColor Green
 
-# Overhauled decision branch loop context
-$response = Read-Host "Would you like to run Eclips now? Press Y to run darkcom2.bat, press N to run darkcom2.ps1"
+# ============================================================================
+# INTERACTIVE KEYBOARD-DRIVEN MENU SELECTION (FIXED RENDERING)
+# ============================================================================
 
-if ($response -match '^[Yy]') {
+$MenuOptions = @(
+    "Run darkcom2.bat (State Broker Interactive Menu)",
+    "Run darkcom2.ps1 (Headless Runspace Broker Thread)",
+    "Exit Installer Sequence"
+)
+$Selection = 0
+$Running = $true
+
+# Hide terminal cursor while browsing the selection list
+[Console]::CursorVisible = $false
+
+Write-Host "$ESC[33mWould you like to run Eclipse now?$ESC[0m"
+Write-Host "$ESC[90mUse UP/DOWN arrow keys and press ENTER to confirm choice:$ESC[0m`n"
+
+# Capture the baseline starting line for absolute cursor placement
+$StartTop = [Console]::CursorTop
+
+while ($Running) {
+    # Jump back to the exact menu rendering anchor point
+    [Console]::SetCursorPosition(0, $StartTop)
+    
+    for ($i = 0; $i -lt $MenuOptions.Count; $i++) {
+        if ($i -eq $Selection) {
+            Write-Host "$ESC[30;103m  > [X] $($MenuOptions[$i])  $ESC[0m"
+        } else {
+            Write-Host "$ESC[97m    [ ] $($MenuOptions[$i]) $ESC[0m"
+        }
+    }
+    
+    $KeyInfo = [Console]::ReadKey($true)
+    
+    if ($KeyInfo.Key -eq [ConsoleKey]::UpArrow) {
+        if ($Selection -eq 0) { $Selection = $MenuOptions.Count - 1 } else { $Selection-- }
+    }
+    elseif ($KeyInfo.Key -eq [ConsoleKey]::DownArrow) {
+        if ($Selection -eq $MenuOptions.Count - 1) { $Selection = 0 } else { $Selection++ }
+    }
+    elseif ($KeyInfo.Key -eq [ConsoleKey]::Enter) {
+        $Running = $false
+    }
+}
+
+# Restore default console visibility properties
+[Console]::CursorVisible = $true
+Clear-Host
+
+# Process branch targets based on final menu coordinate selection context
+if ($Selection -eq 0) {
     Write-Host "$ESC[93m[INFO] Invoking state broker interactive console menu...$ESC[0m"
     if (Test-Path $BatPath) {
+		cls
         & cmd.exe /c "$BatPath"
     } else {
         Write-Error "$ESC[91m[ERROR] Batch routing asset is missing or inaccessible.$ESC[0m"
     }
 } 
-elseif ($response -match '^[Nn]') {
+elseif ($Selection -eq 1) {
     Write-Host "$ESC[90m[INFO] Bypassing execution policies for headless Runspace Broker thread...$ESC[0m"
     if (Test-Path $ScriptPath) {
         $ProcessArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`""
+		cls
         Start-Process -FilePath "powershell.exe" -ArgumentList $ProcessArgs -NoNewWindow -Wait
     } else {
         Write-Error "$ESC[91m[ERROR] Native PowerShell backend execution script is missing.$ESC[0m"

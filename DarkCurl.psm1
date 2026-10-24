@@ -3,6 +3,20 @@
 # PowerShell Command-Line Wrapper for DarkComHeadless WebView2 Engine
 # ====================================================================
 
+# Ensure Windows looks inside this module's directory for native DLLs
+$NativeDllPath = $PSScriptRoot
+if (Test-Path $NativeDllPath) {
+    Add-Type -TypeDefinition @"
+    using System;
+    using System.Runtime.InteropServices;
+    public class DarkKernel32 {
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        public static extern bool SetDllDirectory(string lpPathName);
+    }
+"@ -ErrorAction SilentlyContinue
+    [DarkKernel32]::SetDllDirectory($NativeDllPath) | Out-Null
+}
+
 # Define the inline C-Sharp structural bridge to map the unmanaged DLL entry points cleanly
 $NativeBridgeCode = @"
 using System;

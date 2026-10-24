@@ -1,103 +1,118 @@
 [CmdletBinding()]
-param (
-    [Parameter(Mandatory = $false, Position = 0)]
-    [string]$Url = "https://httpbin.org",
-
-    [Parameter(Mandatory = $false, Position = 1)]
-    [string]$Data = $null
-)
+param()
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "=====================================================" -ForegroundColor Cyan
-Write-Host " Dark-Com-2 Engine Headless Execution Broker (Native)" -ForegroundColor Cyan
+Write-Host " Dark-Com-2 Engine Global PowerShell Installer" -ForegroundColor Cyan
 Write-Host "=====================================================" -ForegroundColor Cyan
 
-if ([string]::IsNullOrWhiteSpace($Url)) {
-    $Url = "https://httpbin.org"
-}
-
-$TargetDirectory = Join-Path $HOME "Documents\DarkComEngine"
-$DllPath = Join-Path $TargetDirectory "DarkComHeadless.dll"
-
-if (-not (Test-Path $DllPath)) {
-    Write-Error "[FATAL] Missing core component: $DllPath"
-    return
-}
-
-# 1. Set DLL directory explicitly for the current process
 try {
-    $KernelCode = @"
-using System;
-using System.Runtime.InteropServices;
-public class EngineKernel32 {
-    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-    public static extern bool SetDllDirectory(string lpPathName);
-}
-"@
-    Add-Type -TypeDefinition $KernelCode -ErrorAction SilentlyContinue
-    [EngineKernel32]::SetDllDirectory($TargetDirectory) | Out-Null
-}
-catch {
-    Write-Error "[FATAL] Failed to configure DLL search path: $_"
-    return
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+} catch {}
+
+$TargetModuleRoot = Join-Path $HOME "Documents\DarkComEngine"
+
+if (-not (Test-Path $TargetModuleRoot)) {
+    Write-Host "[INFO] Creating destination infrastructure layout..." -ForegroundColor Yellow
+    New-Item -ItemType Directory -Path $TargetModuleRoot -Force | Out-Null
 }
 
-# 2. Initialize native structural bindings and Direct Interop
-try {
-    $NativeBridgeCode = @"
-using System;
-using System.Runtime.InteropServices;
+# Change to the installation directory FIRST before downloading/running anything
+Set-Location $TargetModuleRoot
+Write-Host "[INFO] Working Directory set to: $(Get-Location)" -ForegroundColor Yellow
 
-[StructLayout(LayoutKind.Sequential)]
-public struct DarkWin32Msg {
-    public IntPtr hwnd;
-    public uint message;
-    public IntPtr wParam;
-    public IntPtr lParam;
-    public uint time;
-    public int pt_x;
-    public int pt_y;
-}
+$FilesToDownload = @(
+    @{
+        Name     = "darkcom2.exe"
+        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/darkcom2.exe"
+        Required = $true
+    },
+    @{
+        Name     = "DarkComHeadless.dll"
+        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/DarkComHeadless.dll"
+        Required = $true
+    },
+    @{
+        Name     = "WebView2Loader.dll"
+        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/WebView2Loader.dll"
+        Required = $true
+    },
+    @{
+        Name     = "darkcom2.ps1"
+        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/darkcom2.ps1"
+        Required = $true
+    },
+    @{
+        Name     = "darkcom2.bat"
+        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/darkcom2.bat"
+        Required = $true
+    }
+)
 
-public class DarkComEngine {
-    [DllImport("DarkComHeadless.dll", CharSet = CharSet.Unicode, CallingConvention = CallingConvention.StdCall)]
-    public static extern IntPtr RunHeadlessRequest(string url, string postData);
+Write-Host "[INFO] Fetching core engine deployment layers from GitHub..." -ForegroundColor Yellow
 
-    [DllImport("user32.dll")]
-    public static extern bool PeekMessage(out DarkWin32Msg lpMsg, IntPtr hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg);
+$FailedFiles = @()
 
-    [DllImport("user32.dll")]
-    public static extern bool TranslateMessage(ref DarkWin32Msg lpMsg);
+foreach ($File in $FilesToDownload) {
+    $Destination = Join-Path $TargetModuleRoot $File.Name
 
-    [DllImport("user32.dll")]
-    public static extern IntPtr DispatchMessage(ref DarkWin32Msg lpMsg);
-}
-"@
-    if (-not ([System.Management.Automation.PSTypeName]'DarkComEngine').Type) {
-        Add-Type -TypeDefinition $NativeBridgeCode -ErrorAction SilentlyContinue
+    try {
+        Write-Host " -> Downloading: $($File.Name)" -ForegroundColor Gray
+
+        Invoke-WebRequest `
+            -Uri $File.Url `
+            -OutFile $Destination `
+            -UseBasicParsing `
+            -TimeoutSec 30 `
+            -ErrorAction Stop
+
+        if (-not (Test-Path $Destination)) {
+            throw "File was not created."
+        }
+
+        $FileSize = (Get-Item $Destination).Length
+
+        if ($FileSize -le 0) {
+            throw "Downloaded file is empty."
+        }
+
+        Write-Host "    [OK] $($File.Name) ($FileSize bytes)" -ForegroundColor Green
+    }
+    catch {
+        Write-Warning "[WARN] Failed to download $($File.Name)"
+        Write-Warning $_.Exception.Message
+
+        if ($File.Required) {
+            $FailedFiles += $File.Name
+        }
     }
 }
-catch {
-    Write-Error "[FATAL] Failed to configure Interop type layouts: $_"
+
+if ($FailedFiles.Count -gt 0) {
+    Write-Error "[FATAL] Missing required files: $($FailedFiles -join ', ')"
     return
 }
 
-# 3. Execute Native Request directly with a message loop pump
-try {
-    Write-Host "[INFO] Invoking headless request for: $Url" -ForegroundColor Yellow
+$ScriptPath = ".\darkcom2.ps1"
+$BatPath = ".\darkcom2.bat"
 
-    # Call native DLL entry point directly
-    $Ptr = [DarkComEngine]::RunHeadlessRequest($Url, $Data)
+Write-Host ""
+Write-Host "[SUCCESS] Dark-Com-2 Engine installed successfully in: $(Get-Location)" -ForegroundColor Green
+Write-Host ""
 
-    if ($Ptr -ne [IntPtr]::Zero) {
-        $ResponsePayload = [System.Runtime.InteropServices.Marshal]::PtrToStringAnsi($Ptr)
-        Write-Host "`n[RESPONSE DATA]:" -ForegroundColor Green
-        return $ResponsePayload
-    } else {
-        Write-Error "[ERROR] Headless execution returned a null pointer reference."
+$response = Read-Host "Would you like to run darkcom2.ps1 now? (Y/N)"
+
+if ($response -match '^[Yy]') {
+    Write-Host "[INFO] Attempting to launch darkcom2.ps1 from install directory..." -ForegroundColor Yellow
+    try {
+        & powershell.exe -ExecutionPolicy Bypass -File "$ScriptPath"
     }
-}
-catch {
-    Write-Error "[FATAL] An error occurred during native execution: $_"
+    catch {
+        Write-Warning "[WARN] PowerShell script execution failed/blocked. Falling back to batch file..."
+        & cmd.exe /c "$BatPath"
+    }
+} else {
+    Write-Host "[INFO] Launching darkcom2.bat from install directory..." -ForegroundColor Yellow
+    & cmd.exe /c "$BatPath"
 }

@@ -19,6 +19,10 @@ if (-not (Test-Path $TargetModuleRoot)) {
     New-Item -ItemType Directory -Path $TargetModuleRoot -Force | Out-Null
 }
 
+# Change to the installation directory FIRST before downloading/running anything
+Set-Location $TargetModuleRoot
+Write-Host "[INFO] Working Directory set to: $(Get-Location)" -ForegroundColor Yellow
+
 $FilesToDownload = @(
     @{
         Name     = "DarkComHeadless.dll"
@@ -47,7 +51,6 @@ Write-Host "[INFO] Fetching core engine deployment layers from GitHub..." -Foreg
 $FailedFiles = @()
 
 foreach ($File in $FilesToDownload) {
-
     $Destination = Join-Path $TargetModuleRoot $File.Name
 
     try {
@@ -87,22 +90,25 @@ if ($FailedFiles.Count -gt 0) {
     return
 }
 
-# Change working directory to the install directory so everything runs from root context
-Set-Location $TargetModuleRoot
-
 $ScriptPath = ".\darkcom2.ps1"
 $BatPath = ".\darkcom2.bat"
 
 Write-Host ""
-Write-Host "[SUCCESS] Dark-Com-2 Engine installed successfully!" -ForegroundColor Green
-Write-Host "[INFO] Current Working Directory changed to: $TargetModuleRoot" -ForegroundColor Yellow
+Write-Host "[SUCCESS] Dark-Com-2 Engine installed successfully in: $(Get-Location)" -ForegroundColor Green
 Write-Host ""
-Write-Host "=====================================================" -ForegroundColor Cyan
-Write-Host " To launch the PowerShell interface, run:" -ForegroundColor White
-Write-Host "   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process" -ForegroundColor Yellow
-Write-Host "   & `"$ScriptPath`"" -ForegroundColor Yellow
-Write-Host ""
-Write-Host " Or simply run the batch file directly:" -ForegroundColor White
-Write-Host "   & `"$BatPath`"" -ForegroundColor Yellow
-Write-Host "=====================================================" -ForegroundColor Cyan
-Write-Host ""
+
+$response = Read-Host "Would you like to run darkcom2.ps1 now? (Y/N)"
+
+if ($response -match '^[Yy]') {
+    Write-Host "[INFO] Attempting to launch darkcom2.ps1 from install directory..." -ForegroundColor Yellow
+    try {
+        & powershell.exe -ExecutionPolicy Bypass -File "$ScriptPath"
+    }
+    catch {
+        Write-Warning "[WARN] PowerShell script execution failed/blocked. Falling back to batch file..."
+        & cmd.exe /c "$BatPath"
+    }
+} else {
+    Write-Host "[INFO] Launching darkcom2.bat from install directory..." -ForegroundColor Yellow
+    & cmd.exe /c "$BatPath"
+}

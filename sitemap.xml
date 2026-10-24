@@ -109,10 +109,16 @@
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/packages/readme.md</loc>
   </url>
   <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/darkcom2.exe</loc>
+  </url>
+  <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/sitemap.xml</loc>
   </url>
   <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/main.obj</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/DarkComHeadless.dll</loc>
   </url>
   <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/WebView2Loader.dll</loc>

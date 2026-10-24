@@ -87,25 +87,22 @@ if ($FailedFiles.Count -gt 0) {
     return
 }
 
-$ScriptPath = Join-Path $TargetModuleRoot "darkcom2.ps1"
-$BatPath = Join-Path $TargetModuleRoot "darkcom2.bat"
+# Change working directory to the install directory so everything runs from root context
+Set-Location $TargetModuleRoot
+
+$ScriptPath = ".\darkcom2.ps1"
+$BatPath = ".\darkcom2.bat"
 
 Write-Host ""
-Write-Host "[SUCCESS] Dark-Com-2 Engine installed successfully to: $TargetModuleRoot" -ForegroundColor Green
+Write-Host "[SUCCESS] Dark-Com-2 Engine installed successfully!" -ForegroundColor Green
+Write-Host "[INFO] Current Working Directory changed to: $TargetModuleRoot" -ForegroundColor Yellow
 Write-Host ""
-
-$response = Read-Host "Would you like to run darkcom2.ps1? (Y/N)"
-
-if ($response -match '^[Yy]') {
-    Write-Host "[INFO] Launching darkcom2.ps1..." -ForegroundColor Yellow
-    try {
-        powershell.exe -ExecutionPolicy Bypass -File "$ScriptPath"
-    }
-    catch {
-        Write-Warning "[WARN] Execution failed. Falling back to batch file..."
-        cmd.exe /c "$BatPath"
-    }
-} else {
-    Write-Host "[INFO] Launching darkcom2.bat..." -ForegroundColor Yellow
-    cmd.exe /c "$BatPath"
-}
+Write-Host "=====================================================" -ForegroundColor Cyan
+Write-Host " To launch the PowerShell interface, run:" -ForegroundColor White
+Write-Host "   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process" -ForegroundColor Yellow
+Write-Host "   & `"$ScriptPath`"" -ForegroundColor Yellow
+Write-Host ""
+Write-Host " Or simply run the batch file directly:" -ForegroundColor White
+Write-Host "   & `"$BatPath`"" -ForegroundColor Yellow
+Write-Host "=====================================================" -ForegroundColor Cyan
+Write-Host ""

@@ -1,17 +1,22 @@
-#ifndef HEADLESS_PS_H
-#define HEADLESS_PS_H
+#ifndef HEADLESS_H
+#define HEADLESS_H
+
+#include <windows.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// Data structure to store mapped command line flags parsed from PowerShell
+// Command line configuration structure
 typedef struct {
-    const wchar_t* url;
-    const wchar_t* method;
-    const wchar_t* postData;
+    wchar_t* url;
+    wchar_t* method;
+    wchar_t* postData;
     int isVerbose;
 } CommandLineArgs;
+
+// Master Export Signature for DarkComHeadless.dll
+__declspec(dllexport) const char* RunHeadlessRequest(const wchar_t* url, const wchar_t* postData);
 
 // Runtime Parsing and Validation Utilities
 void PrintUsageInstructions(void);
@@ -21,4 +26,4 @@ BOOL ParsePowerShellArguments(int argc, wchar_t* argv[], CommandLineArgs* outArg
 }
 #endif
 
-#endif // HEADLESS_PS_H
+#endif // HEADLESS_H

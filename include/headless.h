@@ -1,16 +1,29 @@
-#ifndef DARK_COM_HEADLESS_H
-#define DARK_COM_HEADLESS_H
+#ifndef HEADLESS_H
+#define HEADLESS_H
+
+#include <windows.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// Master Export Signature for Fire-Gem to call dynamically
-// Pass target URL and standard parameters. (Set postData to NULL for automatic GET)
-__declspec(dllexport) const char* RunHeadlessRequest(const wchar_t* url, const wchar_t* postData);
+// Command line configuration structure
+typedef struct {
+    wchar_t* url;
+    wchar_t* method;
+    wchar_t* postData;
+    int isVerbose;
+} CommandLineArgs;
+
+// Master Export Signature updated to mirror structure reference patterns
+__declspec(dllexport) const char* __cdecl RunHeadlessRequest(const CommandLineArgs* config);
+
+// Runtime Parsing and Validation Utilities
+void PrintUsageInstructions(void);
+BOOL ParsePowerShellArguments(int argc, wchar_t* argv[], CommandLineArgs* outArgs);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // DARK_COM_HEADLESS_H
+#endif // HEADLESS_H

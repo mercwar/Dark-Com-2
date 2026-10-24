@@ -4,10 +4,10 @@ param()
 $ErrorActionPreference = "Stop"
 
 Write-Host "=====================================================" -ForegroundColor Cyan
-Write-Host " Dark-Com-2 Engine Global PowerShell Installer & Menu" -ForegroundColor Cyan
+Write-Host " Dark-Com-2 Global Engine Installer & Auto-Runner" -ForegroundColor Cyan
 Write-Host "=====================================================" -ForegroundColor Cyan
 
-# 1. Establish directory layout for native binaries
+# 1. Establish directory layout for binaries and scripts
 $TargetDirectory = Join-Path $HOME "Documents\DarkComEngine"
 
 if (-not (Test-Path $TargetDirectory)) {
@@ -15,7 +15,7 @@ if (-not (Test-Path $TargetDirectory)) {
     New-Item -ItemType Directory -Path $TargetDirectory -Force | Out-Null
 }
 
-# 2. Download native DLL binaries
+# 2. Download all core binaries and scripts directly from GitHub main branch
 $FilesToDownload = @(
     @{
         Name = "DarkComHeadless.dll"
@@ -24,10 +24,18 @@ $FilesToDownload = @(
     @{
         Name = "WebView2Loader.dll"
         Url  = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/WebView2Loader.dll"
+    },
+    @{
+        Name = "darkcom2.bat"
+        Url  = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/darkcom2.bat"
+    },
+    @{
+        Name = "dcurl.ps1"
+        Url  = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/dcurl.ps1"
     }
 )
 
-Write-Host "[INFO] Fetching core engine binaries..." -ForegroundColor Yellow
+Write-Host "[INFO] Fetching core engine components from GitHub..." -ForegroundColor Yellow
 
 foreach ($File in $FilesToDownload) {
     $Destination = Join-Path $TargetDirectory $File.Name
@@ -43,7 +51,7 @@ foreach ($File in $FilesToDownload) {
             -ErrorAction Stop
 
         if (-not (Test-Path $Destination) -or (Get-Item $Destination).Length -eq 0) {
-            throw "Downloaded binary is empty or missing."
+            throw "Downloaded file is empty or missing."
         }
 
         Write-Host "    [OK] $($File.Name)" -ForegroundColor Green
@@ -66,14 +74,13 @@ public class DarkKernel32 {
 
 [DarkKernel32]::SetDllDirectory($TargetDirectory) | Out-Null
 
-# 4. Compile unmanaged C# interop bridge directly in-memory
-# (Matches structure-bound command line arguments: url, method, postData, isVerbose)
+# 4. Compile unmanaged C# interop bridge with CommandLineArgs structure layout
 $NativeBridgeCode = @"
 using System;
 using System.Runtime.InteropServices;
 
 [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-public struct CommandLineArgs {
+public struct CommandLineArgsStruct {
     public IntPtr url;
     public IntPtr method;
     public IntPtr postData;
@@ -82,7 +89,7 @@ public struct CommandLineArgs {
 
 public class DarkComEngine {
     [DllImport("DarkComHeadless.dll", CharSet = CharSet.Unicode, CallingConvention = CallingConvention.Cdecl)]
-    public static extern IntPtr RunHeadlessRequest(ref CommandLineArgs args);
+    public static extern IntPtr RunHeadlessRequest(ref CommandLineArgsStruct args);
 }
 "@
 
@@ -90,7 +97,7 @@ if (-not ([System.Management.Automation.PSTypeName]'DarkComEngine').Type) {
     Add-Type -TypeDefinition $NativeBridgeCode -ErrorAction SilentlyContinue
 }
 
-# 5. Define Invoke-DarkCurl function in global scope
+# 5. Define Invoke-DarkCurl function in global memory session
 function global:Invoke-DarkCurl {
     [CmdletBinding()]
     param (
@@ -109,15 +116,15 @@ function global:Invoke-DarkCurl {
 
     process {
         try {
-            $argsStruct = New-Object CommandLineArgs
-            $argsStruct.url = [System.Runtime.InteropServices.Marshal]::StringToHSTRUnmanaged($Url)
-            
             if ($Data -and -not $PSBoundParameters.ContainsKey('Method')) {
                 $Method = "POST"
             }
 
+            $argsStruct = New-Object CommandLineArgsStruct
+            $argsStruct.url = [System.Runtime.InteropServices.Marshal]::StringToHSTRUnmanaged($Url)
             $argsStruct.method = [System.Runtime.InteropServices.Marshal]::StringToHSTRUnmanaged($Method)
-            if ($Data) {
+            
+            if (![string]::IsNullOrEmpty($Data)) {
                 $argsStruct.postData = [System.Runtime.InteropServices.Marshal]::StringToHSTRUnmanaged($Data)
             } else {
                 $argsStruct.postData = [IntPtr]::Zero
@@ -132,7 +139,6 @@ function global:Invoke-DarkCurl {
                 Write-Error "[ERROR] Execution returned a null buffer pointer."
             }
 
-            # Cleanup unmanaged allocations
             [System.Runtime.InteropServices.Marshal]::FreeHSTRUnmanaged($argsStruct.url)
             if ($argsStruct.method -ne [IntPtr]::Zero) { [System.Runtime.InteropServices.Marshal]::FreeHSTRUnmanaged($argsStruct.method) }
             if ($argsStruct.postData -ne [IntPtr]::Zero) { [System.Runtime.InteropServices.Marshal]::FreeHSTRUnmanaged($argsStruct.postData) }
@@ -143,7 +149,7 @@ function global:Invoke-DarkCurl {
     }
 }
 
-# 6. Define the Interactive State Broker Menu (dmenu) in global scope
+# 6. Define the Interactive State Broker Menu (dmenu) in global memory session
 function global:Invoke-DarkMenu {
     [CmdletBinding()]
     param()
@@ -249,8 +255,14 @@ Set-Alias -Name dcurl -Value Invoke-DarkCurl -Scope Global -Force
 Set-Alias -Name dmenu -Value Invoke-DarkMenu -Scope Global -Force
 
 Write-Host ""
-Write-Host "[SUCCESS] Dark-Com-2 functions and aliases loaded into memory!" -ForegroundColor Green
-Write-Host "Commands available:" -ForegroundColor White
-Write-Host "  dcurl <URL> [-Method GET/POST] [-Data <JSON>]" -ForegroundColor Yellow
-Write-Host "  dmenu (Launches the Interactive State Broker Control Panel)" -ForegroundColor Yellow
+Write-Host "[SUCCESS] Dark-Com-2 suite installed successfully!" -ForegroundColor Green
+Write-Host "Launching dcurl.ps1 immediately..." -ForegroundColor Yellow
 Write-Host ""
+
+# 7. Auto-run the deployed dcurl.ps1 script
+$PsScriptPath = Join-Path $TargetDirectory "dcurl.ps1"
+if (Test-Path $PsScriptPath) {
+    & $PsScriptPath
+} else {
+    Write-Error "[ERROR] Could not locate deployed dcurl.ps1 at $PsScriptPath"
+}

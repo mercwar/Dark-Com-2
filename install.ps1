@@ -3,9 +3,15 @@ param()
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "=====================================================" -ForegroundColor Cyan
-Write-Host " Dark-Com-2 Engine Global PowerShell Installer" -ForegroundColor Cyan
-Write-Host "=====================================================" -ForegroundColor Cyan
+# Enable ANSI escape processing in modern Windows terminals
+$e = [char]27
+$ESC = "$e"
+
+Clear-Host
+Write-Host "$ESC[96m=====================================================================$ESC[0m"
+Write-Host "$ESC[96m Dark-Com-2 Engine Global PowerShell Installer                      $ESC[0m"
+Write-Host "$ESC[96m=====================================================================$ESC[0m"
+Write-Host ""
 
 try {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -14,18 +20,18 @@ try {
 $TargetModuleRoot = Join-Path $HOME "Documents\DarkComEngine"
 
 if (-not (Test-Path $TargetModuleRoot)) {
-    Write-Host "[INFO] Creating destination infrastructure layout..." -ForegroundColor Yellow
+    Write-Host "$ESC[33m[INFO] Creating destination infrastructure layout...$ESC[0m"
     New-Item -ItemType Directory -Path $TargetModuleRoot -Force | Out-Null
 }
 
-# Change to the installation directory FIRST before downloading/running anything
 Set-Location $TargetModuleRoot
-Write-Host "[INFO] Working Directory set to: $(Get-Location)" -ForegroundColor Yellow
+Write-Host "$ESC[90m[INFO] Working Directory set to: $(Get-Location)$ESC[0m"
+Write-Host ""
 
 $FilesToDownload = @(
     @{
         Name     = "darkcom2.exe"
-        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/"
+        Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/darkcom2.exe"
         Required = $true
     },
     @{
@@ -50,15 +56,46 @@ $FilesToDownload = @(
     }
 )
 
-Write-Host "[INFO] Fetching core engine deployment layers from GitHub..." -ForegroundColor Yellow
+Write-Host "$ESC[94m[INFO] Fetching core engine deployment layers from GitHub...$ESC[0m"
+Write-Host ""
+
+# Helper function to paint a modern flat block progress bar
+function Update-ProgressBar {
+    param (
+        [int]$Current,
+        [int]$Total,
+        [string]$FileName
+    )
+    $Percent = [Math]::Floor(($Current / $Total) * 100)
+    $Width = 30
+    $FilledWidth = [Math]::Floor(($Percent / 100) * $Width)
+    $UnfilledWidth = $Width - $FilledWidth
+    
+    # Character maps: Solid block (█) and light shade track (░)
+    $FilledBlock = [char]9608
+    $UnfilledBlock = [char]9617
+    
+    $Bar = ("$FilledBlock" * $FilledWidth) + ("$UnfilledBlock" * $UnfilledWidth)
+    
+    # Modern terminal coloring: Slate blue track, bright cyan filled segment
+    $PrintStr = "$ESC[G$ESC[90m[$ESC[96m$Bar$ESC[90m] $ESC[97m$Percent% $ESC[90m| Deploying: $ESC[38;5;111m$FileName$ESC[0m"
+    [Console]::Write($PrintStr)
+}
 
 $FailedFiles = @()
+$TotalFiles = $FilesToDownload.Count
+$CurrentIndex = 0
+
+# Initial baseline render of the track
+Update-ProgressBar -Current 0 -Total $TotalFiles -FileName "Initializing Pipeline..."
 
 foreach ($File in $FilesToDownload) {
     $Destination = Join-Path $TargetModuleRoot $File.Name
+    $CurrentIndex++
 
     try {
-        Write-Host " -> Downloading: $($File.Name)" -ForegroundColor Gray
+        # Smoothly advance the bar frame context for the asset
+        Update-ProgressBar -Current $CurrentIndex -Total $TotalFiles -FileName $File.Name
 
         Invoke-WebRequest `
             -Uri $File.Url `
@@ -68,51 +105,47 @@ foreach ($File in $FilesToDownload) {
             -ErrorAction Stop
 
         if (-not (Test-Path $Destination)) {
-            throw "File was not created."
+            throw "File creation anomaly detected."
         }
 
         $FileSize = (Get-Item $Destination).Length
-
         if ($FileSize -le 0) {
-            throw "Downloaded file is empty."
+            throw "Target structural asset size validation returned 0 bytes."
         }
-
-        Write-Host "    [OK] $($File.Name) ($FileSize bytes)" -ForegroundColor Green
     }
     catch {
-        Write-Warning "[WARN] Failed to download $($File.Name)"
-        Write-Warning $_.Exception.Message
-
         if ($File.Required) {
             $FailedFiles += $File.Name
         }
     }
 }
 
+# Finalize the progress line to 100% cleanly
+Update-ProgressBar -Current $TotalFiles -Total $TotalFiles -FileName "Deployment Layout Ready"
+Write-Host "`n"
+
 if ($FailedFiles.Count -gt 0) {
-    Write-Error "[FATAL] Missing required files: $($FailedFiles -join ', ')"
+    Write-Error "$ESC[91m[FATAL] Missing required core architecture files: $($FailedFiles -join ', ')$ESC[0m"
     return
 }
 
 $ScriptPath = ".\darkcom2.ps1"
 $BatPath = ".\darkcom2.bat"
 
-Write-Host ""
-Write-Host "[SUCCESS] Dark-Com-2 Engine installed successfully in: $(Get-Location)" -ForegroundColor Green
+Write-Host "[SUCCESS] Dark-Com-2 Engine infrastructure deployed successfully." -ForegroundColor Green
 Write-Host ""
 
 $response = Read-Host "Would you like to run darkcom2.ps1 now? (Y/N)"
 
 if ($response -match '^[Yy]') {
-    Write-Host "[INFO] Attempting to launch darkcom2.ps1 from install directory..." -ForegroundColor Yellow
+    Write-Host "$ESC[90m[INFO] Attempting to pass execution execution policy layer...$ESC[0m"
     try {
         & powershell.exe -ExecutionPolicy Bypass -File "$ScriptPath"
     }
     catch {
-        Write-Warning "[WARN] PowerShell script execution failed/blocked. Falling back to batch file..."
+        Write-Host "$ESC[91m[WARN] Script policy restriction detected. Falling back to batch handler...$ESC[0m" -WarningAction SilentlyContinue
         & cmd.exe /c "$BatPath"
     }
 } else {
-    Write-Host "[INFO] Launching darkcom2.bat from install directory..." -ForegroundColor Yellow
-    & cmd.exe /c "$BatPath"
+    Write-Host "$ESC[90m[INFO] Installer sequence exiting. Launch darkcom2.bat manually to open panel.$ESC[0m"
 }

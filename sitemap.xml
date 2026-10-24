@@ -4,6 +4,9 @@
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/resource.rc</loc>
   </url>
   <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/DarkCurl.psm1</loc>
+  </url>
+  <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/.github/workflows/fire-site.yml</loc>
   </url>
   <url>
@@ -34,6 +37,9 @@
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/include/headless.h</loc>
   </url>
   <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/headless_ps.c</loc>
+  </url>
+  <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/Dark-Com-2-cpp.zip</loc>
   </url>
   <url>
@@ -61,7 +67,13 @@
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/main.cpp</loc>
   </url>
   <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/headless.c</loc>
+  </url>
+  <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/resource.res</loc>
+  </url>
+  <url>
+    <loc>https://github.com/mercwar/Dark-Com-2/blob/main/install.ps1</loc>
   </url>
   <url>
     <loc>https://github.com/mercwar/Dark-Com-2/blob/main/WebView2.h</loc>

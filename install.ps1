@@ -4,7 +4,7 @@ param()
 $ErrorActionPreference = "Stop"
 
 Write-Host "=====================================================" -ForegroundColor Cyan
-Write-Host " Dark-Com-2 Engine Module Global PowerShell Installer" -ForegroundColor Cyan
+Write-Host " Dark-Com-2 Engine Global PowerShell Installer" -ForegroundColor Cyan
 Write-Host "=====================================================" -ForegroundColor Cyan
 
 try {
@@ -38,7 +38,7 @@ $FilesToDownload = @(
     @{
         Name     = "darkcom2.bat"
         Url      = "https://github.com/mercwar/Dark-Com-2/raw/refs/heads/main/darkcom2.bat"
-        Required = $false
+        Required = $true
     }
 )
 
@@ -88,22 +88,24 @@ if ($FailedFiles.Count -gt 0) {
 }
 
 $ScriptPath = Join-Path $TargetModuleRoot "darkcom2.ps1"
-
-if (-not (Test-Path $ScriptPath)) {
-    Write-Error "[FATAL] darkcom2.ps1 was not installed."
-    return
-}
+$BatPath = Join-Path $TargetModuleRoot "darkcom2.bat"
 
 Write-Host ""
 Write-Host "[SUCCESS] Dark-Com-2 Engine installed successfully to: $TargetModuleRoot" -ForegroundColor Green
 Write-Host ""
-Write-Host "=====================================================" -ForegroundColor Yellow
-Write-Host " IMPORTANT: PowerShell script execution may be disabled." -ForegroundColor Yellow
-Write-Host " If running scripts is blocked, execute this command first:" -ForegroundColor White
-Write-Host "   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process" -ForegroundColor Cyan
-Write-Host ""
-Write-Host " To launch the interface, run:" -ForegroundColor White
-Write-Host "   & `"$ScriptPath`"" -ForegroundColor Cyan
-Write-Host "=====================================================" -ForegroundColor Yellow
-Write-Host ""
-./darkcom2.bat
+
+$response = Read-Host "Would you like to run darkcom2.ps1? (Y/N)"
+
+if ($response -match '^[Yy]') {
+    Write-Host "[INFO] Launching darkcom2.ps1..." -ForegroundColor Yellow
+    try {
+        powershell.exe -ExecutionPolicy Bypass -File "$ScriptPath"
+    }
+    catch {
+        Write-Warning "[WARN] Execution failed. Falling back to batch file..."
+        cmd.exe /c "$BatPath"
+    }
+} else {
+    Write-Host "[INFO] Launching darkcom2.bat..." -ForegroundColor Yellow
+    cmd.exe /c "$BatPath"
+}

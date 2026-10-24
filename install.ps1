@@ -53,13 +53,19 @@ $FilesToDownload = @(
 Write-Host "[INFO] Fetching core engine deployment layers from GitHub..." -ForegroundColor Yellow
 
 $FailedFiles = @()
+$TotalFiles = $FilesToDownload.Count
+$CurrentIndex = 0
 
 foreach ($File in $FilesToDownload) {
+    $CurrentIndex++
+    $PercentComplete = [int](($CurrentIndex / $TotalFiles) * 100)
     $Destination = Join-Path $TargetModuleRoot $File.Name
 
-    try {
-        Write-Host " -> Downloading: $($File.Name)" -ForegroundColor Gray
+    Write-Progress -Activity "Downloading Dark-Com-2 Assets" `
+                   -Status "Processing: $($File.Name)" `
+                   -PercentComplete $PercentComplete
 
+    try {
         Invoke-WebRequest `
             -Uri $File.Url `
             -OutFile $Destination `
@@ -76,18 +82,18 @@ foreach ($File in $FilesToDownload) {
         if ($FileSize -le 0) {
             throw "Downloaded file is empty."
         }
-
-        Write-Host "    [OK] $($File.Name) ($FileSize bytes)" -ForegroundColor Green
     }
     catch {
-        Write-Warning "[WARN] Failed to download $($File.Name)"
-        Write-Warning $_.Exception.Message
+        Write-Warning "[WARN] Failed to download $($File.Name): $_"
 
         if ($File.Required) {
             $FailedFiles += $File.Name
         }
     }
 }
+
+# Complete/clear the progress bar
+Write-Progress -Activity "Downloading Dark-Com-2 Assets" -Completed
 
 if ($FailedFiles.Count -gt 0) {
     Write-Error "[FATAL] Missing required files: $($FailedFiles -join ', ')"

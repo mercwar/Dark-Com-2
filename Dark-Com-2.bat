@@ -1,60 +1,102 @@
 @echo off
-echo ============================================
-echo  AIFVS-ARTIFACT: Dark-Com-2.bat
-echo  Auto MSVC env + Compile WebView2 View Engine
-echo ============================================
-
-:: Force execution context to lock directly onto the script's home folder location
+setlocal DisableDelayedExpansion
+:: ============================================================================
+:: Dark-Com-2 Interactive State Broker Menu (menu.bat)
+:: ============================================================================
+:: Ensure the working directory is the folder where this batch file is located
 cd /d "%~dp0"
-
-:: Flush previous operational application states and runtime cached objects
-if exist Dark-Com-2.exe del /f /q Dark-Com-2.exe
-if exist main.obj del /f /q main.obj
-if exist resource.res del /f /q resource.res
-
-:: Initialize local compiler dependencies if environment context paths are blank
-if not defined VCINSTALLDIR (
-    call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64
-)
-
-echo Compiling embedded binary resource layout assets...
-if exist favi-con.ico (
-    rc.exe resource.rc
-) else (
-    echo WARNING: favi-con.ico was missing! Skipping embedding step...
-)
-
-echo Building application window layer: Dark-Com-2.exe
-
-:: Compile application code with explicit Unicode definitions to fix string truncation
-cl ^
-  main.cpp ^
-  resource.res ^
-  /DUNICODE /D_UNICODE ^
-  /I "packages\Microsoft.Web.WebView2\build\native\include" ^
-  /Fe:Dark-Com-2.exe ^
-  /EHsc ^
-  /link ^
-  /LIBPATH:"packages\Microsoft.Web.WebView2\build\native\x64" ^
-  WebView2Loader.dll.lib user32.lib ole32.lib gdi32.lib
-
-if exist Dark-Com-2.exe (
-    echo.
-    echo Build Complete: Dark-Com-2.exe
-    echo --------------------------------------------
-    
-    :: Safe extraction transfer routing of the required user engine system loader artifact
-    if exist "packages\Microsoft.Web.WebView2\build\native\x64\WebView2Loader.dll" (
-        copy /Y "packages\Microsoft.Web.WebView2\build\native\x64\WebView2Loader.dll" "WebView2Loader.dll" >nul
-    )
-    
-    echo Launching Embedded Form Window Instance...
-    Dark-Com-2.exe
-) else (
-    echo.
-    echo --------------------------------------------
-    echo ERROR: Build failed. Verify your compiler or asset paths.
-    echo --------------------------------------------
-)
-
+set "ENDPOINT=https://mercwar01.byethost3.com/darkcom2/index.php"
+:MENU
+cls
+echo ============================================================
+echo         DARK-COM-2 STATE BROKER CONTROL PANEL
+echo ============================================================
+echo  [1] Read Application (Public)
+echo Write Application (Public)
+echo  [3] Read Application (Private)
+echo  [4] Write Application (Private)
+echo  [5] Read Session (Public)
+echo  [6] Write Session (Public)
+echo  [7] Read Session (Private)
+echo  [8] Write Session (Private)
+echo  [9] Exit
+echo ============================================================
+set /p "choice=Select option [1-9]: "
+if "%choice%"=="1" goto READ_APP_PUB
+if "%choice%"=="2" goto WRITE_APP_PUB
+if "%choice%"=="3" goto READ_APP_PRIV
+if "%choice%"=="4" goto WRITE_APP_PRIV
+if "%choice%"=="5" goto READ_SES_PUB
+if "%choice%"=="6" goto WRITE_SES_PUB
+if "%choice%"=="7" goto READ_SES_PRIV
+if "%choice%"=="8" goto WRITE_SES_PRIV
+if "%choice%"=="9" exit /b 0
+goto MENU
+:READ_APP_PUB
+echo.
+echo [*] Fetching Application Public State...
+echo ------------------------------------------------------------
+darkcom2.exe "%ENDPOINT%?public=true&application=true&write=false" -X GET
+echo ------------------------------------------------------------
 pause
+goto MENU
+:WRITE_APP_PUB
+echo.
+set /p "json_data=Enter JSON payload (e.g. {"status":"online"}): "
+echo [*] Writing to Application Public State...
+echo ------------------------------------------------------------
+darkcom2.exe "%ENDPOINT%?public=true&application=true&write=true" -X POST -d "%json_data%"
+echo ------------------------------------------------------------
+pause
+goto MENU
+:READ_APP_PRIV
+echo.
+echo [*] Fetching Application Private State...
+echo ------------------------------------------------------------
+darkcom2.exe "%ENDPOINT%?public=false&application=true&write=false" -X GET
+echo ------------------------------------------------------------
+pause
+goto MENU
+:WRITE_APP_PRIV
+echo.
+set /p "json_data=Enter JSON payload: "
+echo [*] Writing to Application Private State...
+echo ------------------------------------------------------------
+darkcom2.exe "%ENDPOINT%?public=false&application=true&write=true" -X POST -d "%json_data%"
+echo ------------------------------------------------------------
+pause
+goto MENU
+:READ_SES_PUB
+echo.
+echo [*] Fetching Session Public State...
+echo ------------------------------------------------------------
+darkcom2.exe "%ENDPOINT%?public=true&application=false&write=false" -X GET
+echo ------------------------------------------------------------
+pause
+goto MENU
+:WRITE_SES_PUB
+echo.
+set /p "json_data=Enter JSON payload: "
+echo [*] Writing to Session Public State...
+echo ------------------------------------------------------------
+darkcom2.exe "%ENDPOINT%?public=true&application=false&write=true" -X POST -d "%json_data%"
+echo ------------------------------------------------------------
+pause
+goto MENU
+:READ_SES_PRIV
+echo.
+echo [*] Fetching Session Private State...
+echo ------------------------------------------------------------
+darkcom2.exe "%ENDPOINT%?public=false&application=false&write=false" -X GET
+echo ------------------------------------------------------------
+pause
+goto MENU
+:WRITE_SES_PRIV
+echo.
+set /p "json_data=Enter JSON payload: "
+echo [*] Writing to Session Private State...
+echo ------------------------------------------------------------
+darkcom2.exe "%ENDPOINT%?public=false&application=false&write=true" -X POST -d "%json_data%"
+echo ------------------------------------------------------------
+pause
+goto MENU

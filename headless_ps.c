@@ -157,11 +157,11 @@ int wmain(int argc, wchar_t* argv[]) {
         wprintf(L"[INFO] Spawning windowless broker instance. Executing background transaction...\n");
     }
 
-    wprintf(L"[Uplinking] Dcom...\n");
+    wprintf(L"[Uplinking] Spawning DarkCom2...\n");
 
     const char* serverResponseString = RunHeadlessRequest(&config);
 
-    wprintf(L"[Downlinking] Spawning Dcom...\n");
+    wprintf(L"[Downlinking] Processing Spawn ...\n");
 
     if (serverResponseString != NULL) {
         printf("%s\n", serverResponseString);

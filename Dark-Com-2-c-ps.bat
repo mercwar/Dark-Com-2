@@ -8,7 +8,7 @@ echo ============================================
 cd /d "%~dp0"
 
 :: Flush previous operational application states and runtime cached objects
-if exist darkcom2.exe del /f /q darkcom2.exe
+if exist dc2url.exe del /f /q dc2url.exe
 if exist headless_ps.obj del /f /q headless_ps.obj
 if exist resource.res del /f /q resource.res
 
@@ -41,8 +41,8 @@ if not exist "packages\Microsoft.Web.WebView2" (
         
         if exist "webview2_pkg.zip" del /f /q webview2_pkg.zip
         
-        :: Routing target explicitly to binary package stream API endpoint instead of web landing page
-        curl -s -L -o webview2_pkg.zip "https://nuget.org"
+        :: FIXED: Corrected NuGet V2 direct package download endpoint stream URL
+        curl -s -L -o webview2_pkg.zip "https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2"
         
         if exist "webview2_pkg.zip" (
             echo [INFO] Extracting package layout archives natively...
@@ -68,7 +68,8 @@ echo Compiling embedded binary resource layout assets...
 set "RES_FILE="
 if exist favi-con.ico (
     if exist resource.rc (
-        rc.exe resource.rc
+        :: Compile the dedicated executable resource file into resource.res
+        rc.exe /fo resource.res resource.rc
         if exist resource.res set "RES_FILE=resource.res"
     ) else (
         echo WARNING: resource.rc missing. Skipping resource compilation step...
@@ -77,30 +78,44 @@ if exist favi-con.ico (
     echo WARNING: favi-con.ico was missing! Skipping embedding step...
 )
 
-echo Building PowerShell command-line wrapper app: darkcom2.exe
 
-:: Completed cl compilation matrix block for building the console binary executable
+echo Building PowerShell command-line wrapper app: dc2url.exe
+
+:: Dynamically calculate library path tracking matrices
+set "LIB_DIR=packages\Microsoft.Web.WebView2\build\native\x64"
+if not exist "%LIB_DIR%\WebView2Loader.dll.lib" (
+    if exist "packages\Microsoft.Web.WebView2\build\native\win-x64\WebView2Loader.dll.lib" (
+        set "LIB_DIR=packages\Microsoft.Web.WebView2\build\native\win-x64"
+    )
+)
+
+:: Completed cl compilation matrix block with WebView2 include/lib paths included
 cl ^
-  headless_ps.c ^
-  /O2 ^
-  /DUNICODE /D_UNICODE ^
-  /TC ^
-  /I"include" ^
-  /link ^
-  %RES_FILE% ^
-  /SUBSYSTEM:CONSOLE ^
-  user32.lib ole32.lib shlwapi.lib ^
-  /OUT:"darkcom2.exe"
+    headless_ps.c ^
+    /O2 ^
+    /DUNICODE /D_UNICODE ^
+    /TC ^
+    /I"packages\Microsoft.Web.WebView2\build\native\include" ^
+    /I"include" ^
+    /link ^
+    %RES_FILE% ^
+    /LIBPATH:"%LIB_DIR%" ^
+    WebView2Loader.dll.lib ^
+    /SUBSYSTEM:CONSOLE ^
+    user32.lib ole32.lib shlwapi.lib ^
+    /OUT:"dc2url.exe"
 
-
-if exist darkcom2.exe (
+if exist dc2url.exe (
     echo.
-    echo Build Complete: darkcom2.exe
+    echo Build Complete: dc2url.exe
     echo --------------------------------------------
     
     :: Extraction transfer routing of the required user engine system loader artifact
-    if exist "packages\Microsoft.Web.WebView2\build\native\x64\WebView2Loader.dll" (
-        copy /Y "packages\Microsoft.Web.WebView2\build\native\x64\WebView2Loader.dll" "WebView2Loader.dll" >nul
+    if exist "%LIB_DIR%\WebView2Loader.dll" (
+        copy /Y "%LIB_DIR%\WebView2Loader.dll" "WebView2Loader.dll" >nul
+        echo [SUCCESS] WebView2Loader.dll copied to destination workspace.
+    ) else (
+        echo [WARN] WebView2Loader.dll was missing inside fallback path definitions!
     )
     
     echo [SUCCESS] Standalone PowerShell CLI client compiled cleanly for terminal orchestration loops.

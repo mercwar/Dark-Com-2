@@ -1,428 +1,265 @@
 /* ============================================================================
-   headless.c - WebView2 Headless Engine DLL (Pure C) - Writable User Profile Edition
+   headless.c - WebView2 Headless Execution Engine (Pure C Version)
    ============================================================================ */
 #define COBJMACROS
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <ole2.h>
-#include <oleacc.h>
+#include <webview2.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <wchar.h>
-#include <shlwapi.h>
-#include "WebView2.h"
+#include <string.h>
 #include "headless.h"
 
-#pragma comment(lib, "shlwapi.lib")
+typedef struct {
+    char responseBuffer[65536];
+    volatile LONG isComplete;
+    volatile LONG isNavComplete;
+} HeadlessExecutionContext;
 
-static BOOL g_RequestComplete = FALSE;
-static char* g_ParsedOutput = NULL;
-static HWND g_MessageWindow = NULL;
+static __declspec(thread) HeadlessExecutionContext* g_CurrentContext = NULL;
 
-static wchar_t* g_NormalizedUrl = NULL;
-static wchar_t* g_TargetMethod = NULL;
-static wchar_t* g_PostPayload = NULL;
-static int g_VerboseLogging = 0;
-
-static ICoreWebView2Controller* g_ControllerRef = NULL;
-static ICoreWebView2* g_WebViewRef = NULL;
-
-HRESULT STDMETHODCALLTYPE QueryInterfaceStub(void* This, REFIID riid, void** ppv) { 
-    *ppv = NULL; 
-    return E_NOINTERFACE; 
+static HRESULT STDMETHODCALLTYPE Generic_QueryInterface(void* This, REFIID riid, void** ppvObject) {
+    if (!ppvObject) return E_POINTER;
+    *ppvObject = NULL;
+    if (IsEqualIID(riid, &IID_IUnknown) || IsEqualIID(riid, &IID_ICoreWebView2WebMessageReceivedEventHandler) || IsEqualIID(riid, &IID_ICoreWebView2NavigationCompletedEventHandler)) {
+        *ppvObject = This;
+        return S_OK;
+    }
+    return E_NOINTERFACE;
 }
-ULONG STDMETHODCALLTYPE AddRefStub(void* This) { return 1; }
-ULONG STDMETHODCALLTYPE ReleaseStub(void* This) { return 1; }
 
-// Helper to escape JSON quotes, backslashes, and newlines for safe JS injection
-void EscapeJsonForJS(const wchar_t* src, wchar_t* dest, size_t destSize) {
-    size_t j = 0;
-    for (size_t i = 0; src[i] != L'\0' && j < destSize - 3; i++) {
-        if (src[i] == L'"' || src[i] == L'\\') {
-            dest[j++] = L'\\';
-            dest[j++] = src[i];
-        } else if (src[i] == L'\n') {
-            dest[j++] = L'\\';
-            dest[j++] = L'n';
-        } else if (src[i] == L'\r') {
-            dest[j++] = L'\\';
-            dest[j++] = L'r';
-        } else {
-            dest[j++] = src[i];
+static ULONG STDMETHODCALLTYPE Generic_AddRef(void* This) { return 1; }
+static ULONG STDMETHODCALLTYPE Generic_Release(void* This) { return 1; }
+
+// Web Message Received Handler
+static HRESULT STDMETHODCALLTYPE OnWebMessageReceived_Invoke(
+    ICoreWebView2WebMessageReceivedEventHandler* This,
+    ICoreWebView2* sender,
+    ICoreWebView2WebMessageReceivedEventArgs* args)
+{
+    LPWSTR webMessageStr = NULL;
+    if (SUCCEEDED(ICoreWebView2WebMessageReceivedEventArgs_TryGetWebMessageAsString(args, &webMessageStr)) && webMessageStr) {
+        if (g_CurrentContext) {
+            WideCharToMultiByte(CP_UTF8, 0, webMessageStr, -1, g_CurrentContext->responseBuffer, sizeof(g_CurrentContext->responseBuffer) - 1, NULL, NULL);
+            InterlockedExchange(&g_CurrentContext->isComplete, 1);
         }
+        CoTaskMemFree(webMessageStr);
     }
-    dest[j] = L'\0';
+    return S_OK;
 }
 
-// Unescapes a JSON-stringified string (handles \", \\, \n, \r, \t, \uXXXX)
-static wchar_t* UnescapeJsonString(LPCWSTR jsonStr) {
-    if (!jsonStr) return NULL;
-
-    size_t len = wcslen(jsonStr);
-    if (len == 0) return _wcsdup(L"");
-
-    size_t start = 0;
-    size_t end = len;
-
-    // Strip outer enclosing double quotes if present
-    if (len >= 2 && jsonStr[0] == L'"' && jsonStr[len - 1] == L'"') {
-        start = 1;
-        end = len - 1;
+// Navigation Completed Handler
+static HRESULT STDMETHODCALLTYPE OnNavigationCompleted_Invoke(
+    ICoreWebView2NavigationCompletedEventHandler* This,
+    ICoreWebView2* sender,
+    ICoreWebView2NavigationCompletedEventArgs* args)
+{
+    if (g_CurrentContext) {
+        InterlockedExchange(&g_CurrentContext->isNavComplete, 1);
     }
+    return S_OK;
+}
 
-    wchar_t* buffer = (wchar_t*)malloc(((end - start) + 1) * sizeof(wchar_t));
-    if (!buffer) return NULL;
-
-    size_t outIdx = 0;
-    for (size_t i = start; i < end; i++) {
-        if (jsonStr[i] == L'\\' && i + 1 < end) {
-            i++;
-            switch (jsonStr[i]) {
-                case L'"':  buffer[outIdx++] = L'"';  break;
-                case L'\\': buffer[outIdx++] = L'\\'; break;
-                case L'/':  buffer[outIdx++] = L'/';  break;
-                case L'b':  buffer[outIdx++] = L'\b'; break;
-                case L'f':  buffer[outIdx++] = L'\f'; break;
-                case L'n':  buffer[outIdx++] = L'\n'; break;
-                case L'r':  buffer[outIdx++] = L'\r'; break;
-                case L't':  buffer[outIdx++] = L'\t'; break;
-                case L'u': {
-                    if (i + 4 < end) {
-                        wchar_t hex[5] = { jsonStr[i+1], jsonStr[i+2], jsonStr[i+3], jsonStr[i+4], L'\0' };
-                        buffer[outIdx++] = (wchar_t)wcstoul(hex, NULL, 16);
-                        i += 4;
-                    } else {
-                        buffer[outIdx++] = L'u';
-                    }
-                    break;
-                }
-                default: buffer[outIdx++] = jsonStr[i]; break;
+static void EscapeForJsString(const char* src, char* dest, size_t destSize) {
+    size_t di = 0;
+    for (size_t si = 0; src[si] != '\0' && di < destSize - 2; si++) {
+        char c = src[si];
+        if (c == '\\' || c == '\'' || c == '\"') {
+            if (di < destSize - 3) {
+                dest[di++] = '\\';
+                dest[di++] = c;
+            }
+        } else if (c == '\n') {
+            if (di < destSize - 3) {
+                dest[di++] = '\\';
+                dest[di++] = 'n';
+            }
+        } else if (c == '\r') {
+            if (di < destSize - 3) {
+                dest[di++] = '\\';
+                dest[di++] = 'r';
             }
         } else {
-            buffer[outIdx++] = jsonStr[i];
+            dest[di++] = c;
         }
     }
-    buffer[outIdx] = L'\0';
-    return buffer;
-}
-
-HRESULT STDMETHODCALLTYPE OnScriptExtractionDone(ICoreWebView2ExecuteScriptCompletedHandler* This, HRESULT errorCode, LPCWSTR jsonOutput) {
-    if (g_VerboseLogging) fwprintf(stderr, L"[DEBUG] Script execution completed. HRESULT: 0x%08X\n", errorCode);
-    
-    if (SUCCEEDED(errorCode) && jsonOutput != NULL) {
-        wchar_t* unescapedWide = UnescapeJsonString(jsonOutput);
-        
-        if (unescapedWide) {
-            int bufferSize = WideCharToMultiByte(CP_UTF8, 0, unescapedWide, -1, NULL, 0, NULL, NULL);
-            g_ParsedOutput = (char*)malloc(bufferSize);
-            if (g_ParsedOutput) {
-                WideCharToMultiByte(CP_UTF8, 0, unescapedWide, -1, g_ParsedOutput, bufferSize, NULL, NULL);
-            }
-            free(unescapedWide);
-        }
-    }
-    
-    g_RequestComplete = TRUE;
-    PostQuitMessage(0);
-    return S_OK;
-}
-
-HRESULT STDMETHODCALLTYPE OnNavCompletedHook(ICoreWebView2NavigationCompletedEventHandler* This, ICoreWebView2* sender, ICoreWebView2NavigationCompletedEventArgs* args) {
-    if (g_VerboseLogging) fwprintf(stderr, L"[DEBUG] DOM Navigation Completed. Executing synchronous transmission...\n");
-
-    static ICoreWebView2ExecuteScriptCompletedHandlerVtbl scriptVtbl;
-    scriptVtbl.QueryInterface = (void*)QueryInterfaceStub;
-    scriptVtbl.AddRef = (void*)AddRefStub;
-    scriptVtbl.Release = (void*)ReleaseStub;
-    scriptVtbl.Invoke = OnScriptExtractionDone;
-
-    static ICoreWebView2ExecuteScriptCompletedHandler scriptHandler;
-    scriptHandler.lpVtbl = &scriptVtbl;
-
-    wchar_t* dataScrapeCode = NULL;
-
-    if (g_TargetMethod && _wcsicmp(g_TargetMethod, L"POST") == 0 && g_NormalizedUrl) {
-        wchar_t safePayload[4096] = {0};
-        if (g_PostPayload) {
-            EscapeJsonForJS(g_PostPayload, safePayload, 4096);
-        } else {
-            wcscpy_s(safePayload, 5, L"{}");
-        }
-
-        size_t codeLen = 512 + wcslen(g_NormalizedUrl) + wcslen(safePayload);
-        dataScrapeCode = (wchar_t*)malloc(codeLen * sizeof(wchar_t));
-
-        // Use window.location.href to execute POST directly against the loaded origin context
-        swprintf_s(dataScrapeCode, codeLen,
-            L"(function() {"
-            L"  try {"
-            L"    var xhr = new XMLHttpRequest();"
-            L"    xhr.open('POST', window.location.href, false);"
-            L"    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');"
-            L"    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');"
-            L"    var payload = 'json=' + encodeURIComponent('%s');"
-            L"    xhr.send(payload);"
-            L"    return xhr.responseText;"
-            L"  } catch (err) {"
-            L"    return 'XHR Error: ' + err.message;"
-            L"  }"
-            L"})();",
-            safePayload
-        );
-    } else {
-        dataScrapeCode = _wcsdup(L"document.documentElement.innerText;");
-    }
-
-    ICoreWebView2_ExecuteScript(g_WebViewRef, dataScrapeCode, &scriptHandler);
-    free(dataScrapeCode);
-    return S_OK;
-}
-
-HRESULT STDMETHODCALLTYPE OnControllerReadyHook(ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This, HRESULT result, ICoreWebView2Controller* controller) {
-    if (FAILED(result) || !controller) {
-        wchar_t errBuf[256];
-        swprintf_s(errBuf, 256, L"[ERROR] WebView2 controller creation failed with HRESULT: 0x%08X", result);
-        
-        int sz = WideCharToMultiByte(CP_UTF8, 0, errBuf, -1, NULL, 0, NULL, NULL);
-        g_ParsedOutput = (char*)malloc(sz);
-        if (g_ParsedOutput) {
-            WideCharToMultiByte(CP_UTF8, 0, errBuf, -1, g_ParsedOutput, sz, NULL, NULL);
-        }
-
-        fwprintf(stderr, L"%s\n", errBuf);
-        g_RequestComplete = TRUE;
-        PostQuitMessage(0);
-        return result;
-    }
-
-    g_ControllerRef = controller;
-    ICoreWebView2Controller_AddRef(g_ControllerRef);
-
-    HRESULT hrCore = ICoreWebView2Controller_get_CoreWebView2(g_ControllerRef, &g_WebViewRef);
-    if (FAILED(hrCore) || !g_WebViewRef) {
-        wchar_t errBuf[256];
-        swprintf_s(errBuf, 256, L"[ERROR] get_CoreWebView2 failed. HR: 0x%08X", hrCore);
-        
-        int sz = WideCharToMultiByte(CP_UTF8, 0, errBuf, -1, NULL, 0, NULL, NULL);
-        g_ParsedOutput = (char*)malloc(sz);
-        if (g_ParsedOutput) {
-            WideCharToMultiByte(CP_UTF8, 0, errBuf, -1, g_ParsedOutput, sz, NULL, NULL);
-        }
-
-        fwprintf(stderr, L"%s\n", errBuf);
-        g_RequestComplete = TRUE;
-        PostQuitMessage(0);
-        return E_FAIL;
-    }
-
-    ICoreWebView2_AddRef(g_WebViewRef);
-
-    RECT zeroBounds = { 0, 0, 0, 0 };
-    ICoreWebView2Controller_put_Bounds(g_ControllerRef, zeroBounds);
-    ICoreWebView2Controller_put_IsVisible(g_ControllerRef, FALSE);
-
-    static ICoreWebView2NavigationCompletedEventHandlerVtbl navVtbl;
-    navVtbl.QueryInterface = (void*)QueryInterfaceStub;
-    navVtbl.AddRef = (void*)AddRefStub;
-    navVtbl.Release = (void*)ReleaseStub;
-    navVtbl.Invoke = OnNavCompletedHook;
-
-    static ICoreWebView2NavigationCompletedEventHandler navHandler;
-    navHandler.lpVtbl = &navVtbl;
-
-    EventRegistrationToken token = { 0 };
-    HRESULT hrSub = ICoreWebView2_add_NavigationCompleted(g_WebViewRef, &navHandler, &token);
-    if (FAILED(hrSub)) {
-        fwprintf(stderr, L"[ERROR] add_NavigationCompleted failed: 0x%08X\n", hrSub);
-        g_ParsedOutput = _strdup("[ERROR] Failed to bind navigation completed event handler.");
-        g_RequestComplete = TRUE;
-        PostQuitMessage(0);
-        return hrSub;
-    }
-
-    if (!g_NormalizedUrl) {
-        fwprintf(stderr, L"[ERROR] g_NormalizedUrl is NULL before navigation execution.\n");
-        g_ParsedOutput = _strdup("[ERROR] Target URL pointer is NULL.");
-        g_RequestComplete = TRUE;
-        PostQuitMessage(0);
-        return E_POINTER;
-    }
-
-    wchar_t* initialNavTarget = g_NormalizedUrl;
-
-    if (g_VerboseLogging) fwprintf(stderr, L"[DEBUG] Executing navigation to: %s\n", initialNavTarget);
-    
-    HRESULT hrNav = ICoreWebView2_Navigate(g_WebViewRef, initialNavTarget);
-    if (FAILED(hrNav)) {
-        fwprintf(stderr, L"[ERROR] Navigation execution failed with HR: 0x%08X\n", hrNav);
-        wchar_t errBuf[128];
-        swprintf_s(errBuf, 128, L"[ERROR] Navigation failed: 0x%08X", hrNav);
-        int sz = WideCharToMultiByte(CP_UTF8, 0, errBuf, -1, NULL, 0, NULL, NULL);
-        g_ParsedOutput = (char*)malloc(sz);
-        if (g_ParsedOutput) {
-            WideCharToMultiByte(CP_UTF8, 0, errBuf, -1, g_ParsedOutput, sz, NULL, NULL);
-        }
-        g_RequestComplete = TRUE;
-        PostQuitMessage(0);
-        return hrNav;
-    }
-
-    return S_OK;
-}
-
-HRESULT STDMETHODCALLTYPE OnEnvironmentReadyHook(ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* This, HRESULT result, ICoreWebView2Environment* env) {
-    if (FAILED(result) || !env) {
-        g_ParsedOutput = _strdup("[ERROR] WebView2 environment creation failed.");
-        g_RequestComplete = TRUE;
-        return result;
-    }
-
-    if (g_VerboseLogging) fwprintf(stderr, L"[DEBUG] WebView2 Environment Core Ready. Spawning Broker Controller...\n");
-
-    static ICoreWebView2CreateCoreWebView2ControllerCompletedHandlerVtbl ctrlVtbl;
-    ctrlVtbl.QueryInterface = (void*)QueryInterfaceStub;
-    ctrlVtbl.AddRef = (void*)AddRefStub;
-    ctrlVtbl.Release = (void*)ReleaseStub;
-    ctrlVtbl.Invoke = OnControllerReadyHook;
-
-    static ICoreWebView2CreateCoreWebView2ControllerCompletedHandler ctrlHandler;
-    ctrlHandler.lpVtbl = &ctrlVtbl;
-
-    ICoreWebView2Environment_CreateCoreWebView2Controller(env, g_MessageWindow, &ctrlHandler);
-    return S_OK;
-}
-
-LRESULT CALLBACK SilentWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) { 
-    return DefWindowProc(hwnd, msg, wp, lp); 
-}
-
-static wchar_t* NormalizeUrl(const wchar_t* rawUrl) {
-    if (!rawUrl || wcslen(rawUrl) == 0) return NULL;
-
-    if (StrStrIW(rawUrl, L"http://") == rawUrl || StrStrIW(rawUrl, L"https://") == rawUrl || StrStrIW(rawUrl, L"file://") == rawUrl) {
-        size_t len = wcslen(rawUrl) + 1;
-        wchar_t* copy = (wchar_t*)malloc(len * sizeof(wchar_t));
-        if (copy) wcscpy_s(copy, len, rawUrl);
-        return copy;
-    }
-
-    size_t newLen = wcslen(rawUrl) + 9;
-    wchar_t* fixedUrl = (wchar_t*)malloc(newLen * sizeof(wchar_t));
-    if (fixedUrl) swprintf_s(fixedUrl, newLen, L"https://%s", rawUrl);
-    return fixedUrl;
+    dest[di] = '\0';
 }
 
 __declspec(dllexport) const char* __cdecl RunHeadlessRequest(const CommandLineArgs* config) {
-    if (!config) {
-        return "[ERROR] Configuration structure pointer reference was NULL.";
+    static __declspec(thread) HeadlessExecutionContext ctx;
+    memset(&ctx, 0, sizeof(ctx));
+    g_CurrentContext = &ctx;
+
+    if (!config || !config->webView || !config->url) {
+        return "{\"status\":\"error\",\"message\":\"Invalid configuration or uninitialized WebView2 instance.\"}";
     }
 
-    if (g_ParsedOutput) {
-        free(g_ParsedOutput);
-        g_ParsedOutput = NULL;
+    // 1. Extract Origin/Base URL for pre-flight navigation so fetch() runs in a valid origin context
+    wchar_t originUrl[1024] = {0};
+    const wchar_t* urlPtr = config->url;
+    if (wcsncmp(urlPtr, L"http://", 7) == 0 || wcsncmp(urlPtr, L"https://", 8) == 0) {
+        const wchar_t* pathStart = wcschr(urlPtr + 8, L'/');
+        if (pathStart) {
+            size_t len = pathStart - urlPtr;
+            wcsncpy_s(originUrl, 1024, urlPtr, len);
+        } else {
+            wcscpy_s(originUrl, 1024, urlPtr);
+        }
+    } else {
+        wcscpy_s(originUrl, 1024, L"http://localhost");
     }
 
-    g_RequestComplete = FALSE; 
-    g_VerboseLogging = config->isVerbose;
-    g_NormalizedUrl = NormalizeUrl(config->url);
-    
-    if (g_TargetMethod) { free(g_TargetMethod); g_TargetMethod = NULL; }
-    if (g_PostPayload) { free(g_PostPayload); g_PostPayload = NULL; }
+    // Register Navigation Completed Handler
+    ICoreWebView2NavigationCompletedEventHandlerVtbl navVtbl = {
+        (HRESULT(STDMETHODCALLTYPE*)(ICoreWebView2NavigationCompletedEventHandler*, REFIID, void**))Generic_QueryInterface,
+        (ULONG(STDMETHODCALLTYPE*)(ICoreWebView2NavigationCompletedEventHandler*))Generic_AddRef,
+        (ULONG(STDMETHODCALLTYPE*)(ICoreWebView2NavigationCompletedEventHandler*))Generic_Release,
+        OnNavigationCompleted_Invoke
+    };
+    ICoreWebView2NavigationCompletedEventHandler navHandler = { &navVtbl };
+    EventRegistrationToken navToken;
+    ICoreWebView2_add_NavigationCompleted(config->webView, &navHandler, &navToken);
 
-    if (config->method) {
-        size_t mLen = wcslen(config->method) + 1;
-        g_TargetMethod = (wchar_t*)malloc(mLen * sizeof(wchar_t));
-        if (g_TargetMethod) wcscpy_s(g_TargetMethod, mLen, config->method);
-    }
-
-    if (config->postData) {
-        size_t pLen = wcslen(config->postData) + 1;
-        g_PostPayload = (wchar_t*)malloc(pLen * sizeof(wchar_t));
-        if (g_PostPayload) wcscpy_s(g_PostPayload, pLen, config->postData);
-    }
-
-    if (g_VerboseLogging) {
-        fwprintf(stderr, L"[DEBUG] Initializing transaction parameter buffers...\n");
-        fwprintf(stderr, L"[DEBUG] Raw Source URL: %s\n", config->url ? config->url : L"NULL");
-        fwprintf(stderr, L"[DEBUG] Target Method:  %s\n", g_TargetMethod ? g_TargetMethod : L"GET");
-        fwprintf(stderr, L"[DEBUG] Post Payload:   %s\n", g_PostPayload ? g_PostPayload : L"NONE");
-    }
-
-    if (!g_NormalizedUrl) {
-        return "[ERROR] Invalid or empty URL supplied.";
-    }
-
-    HINSTANCE hModInstance = GetModuleHandle(NULL);
-    WNDCLASS silentClass = { 0 };
-    silentClass.lpfnWndProc = SilentWndProc;
-    silentClass.hInstance = hModInstance;
-    silentClass.lpszClassName = L"FireGemHeadlessEngine";
-    RegisterClass(&silentClass);
-
-    g_MessageWindow = CreateWindowEx(
-        0, 
-        silentClass.lpszClassName, 
-        L"FireGemHost", 
-        WS_POPUP, 
-        0, 0, 0, 0, 
-        NULL, 
-        NULL, 
-        hModInstance, 
-        NULL
-    );
-
-    static ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandlerVtbl envVtbl;
-    envVtbl.QueryInterface = (void*)QueryInterfaceStub;
-    envVtbl.AddRef = (void*)AddRefStub;
-    envVtbl.Release = (void*)ReleaseStub;
-    envVtbl.Invoke = OnEnvironmentReadyHook;
-
-    static ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler envHandler;
-    envHandler.lpVtbl = &envVtbl;
-
-    if (g_VerboseLogging) fwprintf(stderr, L"[DEBUG] Invoking async environment pipeline layer...\n");
-
-    // Construct an explicit local writable user data folder path next to the running DLL/EXE
-    wchar_t userDataPath[MAX_PATH];
-    GetModuleFileNameW(hModInstance, userDataPath, MAX_PATH);
-    PathRemoveFileSpecW(userDataPath);
-    wcscat_s(userDataPath, MAX_PATH, L"\\WebView2Profile");
-
-    if (g_VerboseLogging) fwprintf(stderr, L"[DEBUG] User Data Folder: %s\n", userDataPath);
-
-    HRESULT hr = CreateCoreWebView2EnvironmentWithOptions(NULL, userDataPath, NULL, &envHandler);
+    // Navigate WebView to target origin first to establish valid document security context
+    HRESULT hr = ICoreWebView2_Navigate(config->webView, originUrl);
     if (FAILED(hr)) {
-        if (g_NormalizedUrl) { free(g_NormalizedUrl); g_NormalizedUrl = NULL; }
-        if (g_MessageWindow) { DestroyWindow(g_MessageWindow); g_MessageWindow = NULL; }
-        return "[ERROR] Call to CreateCoreWebView2EnvironmentWithOptions failed.";
+        ICoreWebView2_remove_NavigationCompleted(config->webView, navToken);
+        snprintf(ctx.responseBuffer, sizeof(ctx.responseBuffer), "{\"status\":\"error\",\"message\":\"Navigation HRESULT 0x%08X\"}", (unsigned int)hr);
+        return ctx.responseBuffer;
     }
 
-    MSG windowMsg;
-    while (!g_RequestComplete) {
-        DWORD waitResult = MsgWaitForMultipleObjectsEx(0, NULL, 50, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
-        
-        while (PeekMessage(&windowMsg, NULL, 0, 0, PM_REMOVE)) {
-            if (windowMsg.message == WM_QUIT) {
-                g_RequestComplete = TRUE;
-                break;
-            }
-            TranslateMessage(&windowMsg);
-            DispatchMessage(&windowMsg);
+    // Wait for navigation to complete
+    while (!InterlockedOr(&ctx.isNavComplete, 0)) {
+        MsgWaitForMultipleObjectsEx(0, NULL, 20, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
+        MSG msg;
+        while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
+            TranslateMessage(&msg);
+            DispatchMessageW(&msg);
         }
-        
-        if (waitResult == WAIT_TIMEOUT) {
-            Sleep(1);
+    }
+    ICoreWebView2_remove_NavigationCompleted(config->webView, navToken);
+
+    // 2. Register Web Message Received Handler for fetch response bridging
+    ICoreWebView2WebMessageReceivedEventHandlerVtbl msgVtbl = {
+        (HRESULT(STDMETHODCALLTYPE*)(ICoreWebView2WebMessageReceivedEventHandler*, REFIID, void**))Generic_QueryInterface,
+        (ULONG(STDMETHODCALLTYPE*)(ICoreWebView2WebMessageReceivedEventHandler*))Generic_AddRef,
+        (ULONG(STDMETHODCALLTYPE*)(ICoreWebView2WebMessageReceivedEventHandler*))Generic_Release,
+        OnWebMessageReceived_Invoke
+    };
+    ICoreWebView2WebMessageReceivedEventHandler msgHandler = { &msgVtbl };
+    EventRegistrationToken msgToken;
+    ICoreWebView2_add_WebMessageReceived(config->webView, &msgHandler, &msgToken);
+
+    const wchar_t* ctype = config->contentType ? config->contentType : L"application/x-www-form-urlencoded";
+    if (config->postData && (config->postData[0] == L'{' || config->postData[0] == L'[')) {
+        if (!config->contentType) {
+            ctype = L"application/json";
         }
     }
 
-    if (g_VerboseLogging) fwprintf(stderr, L"[DEBUG] Request completed. Flushing interface pointers...\n");
+    char utf8PostData[16384] = {0};
+    char escapedPostData[32768] = {0};
+    if (config->postData && wcslen(config->postData) > 0) {
+        WideCharToMultiByte(CP_UTF8, 0, config->postData, -1, utf8PostData, sizeof(utf8PostData) - 1, NULL, NULL);
+        EscapeForJsString(utf8PostData, escapedPostData, sizeof(escapedPostData));
+    }
 
-    if (g_WebViewRef) { ICoreWebView2_Release(g_WebViewRef); g_WebViewRef = NULL; }
-    if (g_ControllerRef) { ICoreWebView2Controller_Close(g_ControllerRef); ICoreWebView2Controller_Release(g_ControllerRef); g_ControllerRef = NULL; }
-    if (g_MessageWindow) { DestroyWindow(g_MessageWindow); g_MessageWindow = NULL; }
+    char utf8Url[2048] = {0};
+    char utf8Method[32] = {0};
+    char utf8Ctype[128] = {0};
     
-    if (g_NormalizedUrl) { free(g_NormalizedUrl); g_NormalizedUrl = NULL; }
-    if (g_TargetMethod) { free(g_TargetMethod); g_TargetMethod = NULL; }
-    if (g_PostPayload) { free(g_PostPayload); g_PostPayload = NULL; }
+    WideCharToMultiByte(CP_UTF8, 0, config->url ? config->url : L"", -1, utf8Url, sizeof(utf8Url) - 1, NULL, NULL);
+    WideCharToMultiByte(CP_UTF8, 0, config->method ? config->method : L"GET", -1, utf8Method, sizeof(utf8Method) - 1, NULL, NULL);
+    WideCharToMultiByte(CP_UTF8, 0, ctype, -1, utf8Ctype, sizeof(utf8Ctype) - 1, NULL, NULL);
 
-    return g_ParsedOutput ? g_ParsedOutput : "[ERROR] Request completed with no output returned.";
+    // Construct JS script to execute fetch() now that origin security context is valid
+    wchar_t jsScript[49152];
+    if (config->postData && wcslen(config->postData) > 0) {
+        swprintf_s(jsScript, 49152,
+            L"(async function() {"
+            L"    try {"
+            L"        let res = await fetch('%S', {"
+            L"            method: '%S',"
+            L"            mode: 'cors',"
+            L"            credentials: 'include',"
+            L"            headers: {"
+            L"                'Content-Type': '%S',"
+            L"                'X-Requested-With': 'XMLHttpRequest'"
+            L"            },"
+            L"            body: '%S'"
+            L"        });"
+            L"        let txt = await res.text();"
+            L"        let hdrs = {};"
+            L"        for (let [k, v] of res.headers.entries()) { hdrs[k] = v; }"
+            L"        window.chrome.webview.postMessage(JSON.stringify({"
+            L"            status: res.status,"
+            L"            statusText: res.statusText,"
+            L"            headers: hdrs,"
+            L"            body: txt"
+            L"        }));"
+            L"    } catch(e) {"
+            L"        window.chrome.webview.postMessage(JSON.stringify({status: 'error', message: e.toString()}));"
+            L"    }"
+            L"})();",
+            utf8Url, utf8Method, utf8Ctype, escapedPostData
+        );
+    } else {
+        swprintf_s(jsScript, 49152,
+            L"(async function() {"
+            L"    try {"
+            L"        let res = await fetch('%S', {"
+            L"            method: '%S',"
+            L"            mode: 'cors',"
+            L"            credentials: 'include',"
+            L"            headers: {"
+            L"                'X-Requested-With': 'XMLHttpRequest'"
+            L"            }"
+            L"        });"
+            L"        let txt = await res.text();"
+            L"        let hdrs = {};"
+            L"        for (let [k, v] of res.headers.entries()) { hdrs[k] = v; }"
+            L"        window.chrome.webview.postMessage(JSON.stringify({"
+            L"            status: res.status,"
+            L"            statusText: res.statusText,"
+            L"            headers: hdrs,"
+            L"            body: txt"
+            L"        }));"
+            L"    } catch(e) {"
+            L"        window.chrome.webview.postMessage(JSON.stringify({status: 'error', message: e.toString()}));"
+            L"    }"
+            L"})();",
+            utf8Url, utf8Method
+        );
+    }
+
+    static ICoreWebView2ExecuteScriptCompletedHandlerVtbl execVtbl = {
+        (HRESULT(STDMETHODCALLTYPE*)(ICoreWebView2ExecuteScriptCompletedHandler*, REFIID, void**))Generic_QueryInterface,
+        (ULONG(STDMETHODCALLTYPE*)(ICoreWebView2ExecuteScriptCompletedHandler*))Generic_AddRef,
+        (ULONG(STDMETHODCALLTYPE*)(ICoreWebView2ExecuteScriptCompletedHandler*))Generic_Release,
+        (HRESULT(STDMETHODCALLTYPE*)(ICoreWebView2ExecuteScriptCompletedHandler*, HRESULT, LPCWSTR))Generic_AddRef
+    };
+    ICoreWebView2ExecuteScriptCompletedHandler execHandler = { &execVtbl };
+
+    hr = ICoreWebView2_ExecuteScript(config->webView, jsScript, &execHandler);
+    if (FAILED(hr)) {
+        snprintf(ctx.responseBuffer, sizeof(ctx.responseBuffer), "{\"status\":\"error\",\"message\":\"ICoreWebView2_ExecuteScript HRESULT 0x%08X\"}", (unsigned int)hr);
+        ICoreWebView2_remove_WebMessageReceived(config->webView, msgToken);
+        return ctx.responseBuffer;
+    }
+
+    // Pump message loop until postMessage delivers the payload
+    while (!InterlockedOr(&ctx.isComplete, 0)) {
+        MsgWaitForMultipleObjectsEx(0, NULL, 20, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
+        MSG msg;
+        while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
+            TranslateMessage(&msg);
+            DispatchMessageW(&msg);
+        }
+    }
+
+    ICoreWebView2_remove_WebMessageReceived(config->webView, msgToken);
+    g_CurrentContext = NULL;
+    return ctx.responseBuffer;
 }

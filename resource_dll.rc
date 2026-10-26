@@ -1,0 +1,47 @@
+// ============================================================================
+// RESOURCE IDENTIFIER MANIFEST MATRIX :: DARKCOMHEADLESS RUNTIME ENGINE LAYER
+// ============================================================================
+
+#include <winres.h>
+
+// Define core resource constants explicitly for the compiler
+#define IDI_APP_ICON 101
+
+// 1. DYNAMIC LIBRARY VISUAL RESOURCE MAPPING
+// Embedded visual branding frame for the PE dynamic link header layer
+IDI_APP_ICON ICON "favi-con.ico"
+
+// 2. OFFICIAL WINDOWS FILE VERSIONING INFRASTRUCTURE (DLL CONFIGURATION)
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION    5,1,0,0
+ PRODUCTVERSION 5,1,0,0
+ FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
+#ifdef _DEBUG
+ FILEFLAGS      VS_FF_DEBUG
+#else
+ FILEFLAGS      0x0L
+#endif
+ FILEOS         VOS_NT_WINDOWS32
+ FILETYPE       VFT_DLL // Configured explicitly as a Dynamic Link Library
+ FILESUBTYPE    0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0" // Language: US English (0x0409), Character Set: Unicode (0x04B0)
+        BEGIN
+            VALUE "CompanyName",      "CVBGOD Engineering\0"
+            VALUE "FileDescription",  "Dark-Com-2 Headless Dynamic Engine Library Core Layer\0"
+            VALUE "FileVersion",      "5.1.0.0\0"
+            VALUE "InternalName",     "DarkComHeadless.dll\0"
+            VALUE "LegalCopyright",   "Copyright (C) 2026 Joseph Catalano. All rights reserved.\0"
+            VALUE "OriginalFilename", "DarkComHeadless.dll\0" // Match your target library binary name
+            VALUE "ProductName",      "The Fire Gem Suite :: The Cyborg Chronicles\0"
+            VALUE "ProductVersion",   "5.1\0"
+            VALUE "Comments",         "Headless WebView2 runtime dispatch module for FireGem execution layers.\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

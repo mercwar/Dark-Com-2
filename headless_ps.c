@@ -17,7 +17,7 @@
 
 // Define WebView2 Environment Options CLSID manually for pure C compatibility
 // {2FDE08A8-1E9A-4566-8C05-9FEA9E66CEDD}
-static const GUID CDECL Custom_CLSID_CoreWebView2EnvironmentOptions = { 0x2fde08a8, 0x1e9a, 0x4566, { 0x8c, 0x05, 0x9f, 0xea, 0x9e, 0x66, 0xce, 0xdd } };
+static const GUID Custom_CLSID_CoreWebView2EnvironmentOptions = { 0x2fde08a8, 0x1e9a, 0x4566, { 0x8c, 0x05, 0x9f, 0xea, 0x9e, 0x66, 0xce, 0xdd } };
 
 typedef const char* (__cdecl *RunHeadlessRequest_t)(const CommandLineArgs*);
 
@@ -119,14 +119,27 @@ static BOOL InitializeHeadlessWebView(void) {
     envObj.lpVtbl = &envVtbl;
     envObj.hwndParent = hwnd;
 
-    // Build persistent local profile directory path next to executable for session/cookie persistence
-    wchar_t profilePath[MAX_PATH];
-    GetModuleFileNameW(NULL, profilePath, MAX_PATH);
-    wchar_t* lastSlash = wcsrchr(profilePath, L'\\');
-    if (lastSlash) *lastSlash = L'\0';
-    wcscat_s(profilePath, MAX_PATH, L"\\darkcom_browser_profile");
+    wchar_t localAppData[MAX_PATH] = {0};
+    wchar_t profilePath[MAX_PATH] = {0};
 
-    // Initialize environment options with security bypass switches for localhost & remote requests
+    // 1. Fetch user-owned safe space path directly via environment variable to avoid Program Files locks
+    DWORD envLen = GetEnvironmentVariableW(L"LOCALAPPDATA", localAppData, MAX_PATH);
+    if (envLen == 0 || envLen >= MAX_PATH) {
+        wcscpy_s(localAppData, MAX_PATH, L"C:\\Temp");
+    }
+
+    // 2. Construct absolute directory paths safely inside user-space LocalAppData
+    wchar_t baseFolder[MAX_PATH];
+    wchar_t execFolder[MAX_PATH];
+    swprintf_s(baseFolder, MAX_PATH, L"%s\\dc2url", localAppData);
+    swprintf_s(execFolder, MAX_PATH, L"%s\\dc2url\\exec", localAppData);
+    swprintf_s(profilePath, MAX_PATH, L"%s\\dc2url\\exec\\darkcom_browser_profile", localAppData);
+
+    // Recursively ensure user-space folder tree exists
+    CreateDirectoryW(baseFolder, NULL);
+    CreateDirectoryW(execFolder, NULL);
+    CreateDirectoryW(profilePath, NULL);
+
     ICoreWebView2EnvironmentOptions* options = NULL;
     HRESULT hr = CoCreateInstance(
         &Custom_CLSID_CoreWebView2EnvironmentOptions, 
@@ -137,10 +150,10 @@ static BOOL InitializeHeadlessWebView(void) {
     );
 
     if (SUCCEEDED(hr) && options) {
-        // Disable web security and allow insecure content to support localhost, local IPs, and remote hosts seamlessly
         ICoreWebView2EnvironmentOptions_put_AdditionalBrowserArguments(options, L"--disable-web-security --allow-running-insecure-content");
     }
 
+    // 3. Pass the explicit absolute profilePath to WebView2
     hr = CreateCoreWebView2EnvironmentWithOptions(NULL, profilePath, options, (ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler*)&envObj);
     
     if (options) {
@@ -217,7 +230,10 @@ BOOL ParseArgumentsCurl(int argc, wchar_t* argv[], CommandLineArgs* outArgs, wch
             }
         } 
         else if (arg[0] != L'-') {
-            if (!outArgs->url) outArgs->url = arg;
+            // Only assign as URL if it looks like a web address or isn't a method keyword
+            if (!outArgs->url && _wcsicmp(arg, L"GET") != 0 && _wcsicmp(arg, L"POST") != 0 && _wcsicmp(arg, L"PUT") != 0) {
+                outArgs->url = arg;
+            }
         }
     }
     return (outArgs->url != NULL);

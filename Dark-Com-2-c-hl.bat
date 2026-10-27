@@ -41,7 +41,7 @@ if not exist "packages\Microsoft.Web.WebView2" (
         
         if exist "webview2_pkg.zip" del /f /q webview2_pkg.zip
         
-        :: FIXED: Corrected target route pointing straight to the official stable NuGet download stream endpoint
+        :: FIXED: Corrected target route pointing straight to the official stable NuGet download stream endpoint API
         curl -s -L -o webview2_pkg.zip "https://nuget.org"
         
         if exist "webview2_pkg.zip" (
@@ -97,7 +97,7 @@ cl ^
     /SUBSYSTEM:WINDOWS ^
     /DEF:include/darkcom.def ^
     /LIBPATH:"packages\Microsoft.Web.WebView2\build\native\x64" ^
-    WebView2Loader.dll.lib user32.lib ole32.lib gdi32.lib shlwapi.lib ^
+    WebView2Loader.dll.lib user32.lib ole32.lib gdi32.lib shlwapi.lib shell32.lib ^
     /OUT:"DarkComHeadless.dll"
 
 

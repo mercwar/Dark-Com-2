@@ -11,20 +11,32 @@ extern "C" {
 #pragma once
 
 typedef struct {
-    ICoreWebView2* webView; // Direct WebView2 reference for execution
+    ICoreWebView2* webView;
+    ICoreWebView2Controller* controller; // <-- Added to match headless.c expectations
     const wchar_t* url;
     const wchar_t* method;
     const wchar_t* postData;
-    const wchar_t* contentType; // Added for curl -H compatibility
+    const wchar_t* contentType;
     int isVerbose;
 } CommandLineArgs;
 
-// Master Export Signature
+// Headless Execution Request Exposer
 __declspec(dllexport) const char* __cdecl RunHeadlessRequest(const CommandLineArgs* config);
 
-// Runtime Parsing and Validation Utilities
+// Runtime Usage Instructions Printer
 void PrintUsageInstructions(void);
+
+// Standard Argument Parser Logic
 BOOL ParsePowerShellArguments(int argc, wchar_t* argv[], CommandLineArgs* outArgs);
+
+/**
+ * @brief Master bridge mapping function that matches the signature expected by wmain.
+ * Extracts the parsed data strings, loads them securely into static app storage buffers,
+ * and passes the structure updates back into the runtime loop.
+ */
+BOOL ParseArgumentsCurl(int argc, wchar_t* argv[], CommandLineArgs* outArgs, 
+                        wchar_t* postDataBuf, size_t postDataSize, 
+                        wchar_t* headerBuf, size_t headerSize);
 
 #ifdef __cplusplus
 }

@@ -1,45 +1,26 @@
-#ifndef HEADLESS_H
-#define HEADLESS_H
+#ifndef DARK_COM_HEADLESS_H
+#define DARK_COM_HEADLESS_H
 
 #include <windows.h>
-#include <webview2.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#pragma once
+#ifdef BUILDING_DARKCOM_DLL
+#define DARKCOM_API __declspec(dllexport)
+#else
+#define DARKCOM_API __declspec(dllimport)
+#endif
 
-typedef struct {
-    ICoreWebView2* webView;
-    ICoreWebView2Controller* controller; // <-- Added to match headless.c expectations
-    const wchar_t* url;
-    const wchar_t* method;
-    const wchar_t* postData;
-    const wchar_t* contentType;
-    int isVerbose;
-} CommandLineArgs;
+// Core engine initialization
+DARKCOM_API int RunHeadlessInit(void);
 
-// Headless Execution Request Exposer
-__declspec(dllexport) const char* __cdecl RunHeadlessRequest(const CommandLineArgs* config);
-
-// Runtime Usage Instructions Printer
-void PrintUsageInstructions(void);
-
-// Standard Argument Parser Logic
-BOOL ParsePowerShellArguments(int argc, wchar_t* argv[], CommandLineArgs* outArgs);
-
-/**
- * @brief Master bridge mapping function that matches the signature expected by wmain.
- * Extracts the parsed data strings, loads them securely into static app storage buffers,
- * and passes the structure updates back into the runtime loop.
- */
-BOOL ParseArgumentsCurl(int argc, wchar_t* argv[], CommandLineArgs* outArgs, 
-                        wchar_t* postDataBuf, size_t postDataSize, 
-                        wchar_t* headerBuf, size_t headerSize);
+// Main headless request execution handler matching the DEF file export
+DARKCOM_API int RunHeadlessRequest(const char* url, const char* method, const char* postData, char* outBuffer, DWORD outBufferSize);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // HEADLESS_H
+#endif // DARK_COM_HEADLESS_H

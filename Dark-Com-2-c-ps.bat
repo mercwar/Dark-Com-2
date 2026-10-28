@@ -90,9 +90,9 @@ if not exist "%LIB_DIR%\WebView2Loader.dll.lib" (
 )
 
 :: Completed cl compilation matrix block with WebView2 include/lib paths included
-:: Completed cl compilation matrix block with WebView2 include/lib paths included
 cl ^
     headless_ps.c ^
+    system_loader.c ^
     /O2 ^
     /DUNICODE /D_UNICODE ^
     /TC ^
@@ -103,9 +103,8 @@ cl ^
     /LIBPATH:"%LIB_DIR%" ^
     WebView2Loader.dll.lib ^
     /SUBSYSTEM:CONSOLE ^
-    user32.lib ole32.lib shlwapi.lib shell32.lib ^
+    user32.lib ole32.lib advapi32.lib crypt32.lib shlwapi.lib shell32.lib ^
     /OUT:"dc2url.exe"
-
 if exist dc2url.exe (
     echo.
     echo Build Complete: dc2url.exe

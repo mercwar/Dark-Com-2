@@ -97,9 +97,8 @@ cl ^
     /SUBSYSTEM:WINDOWS ^
     /DEF:include/darkcom.def ^
     /LIBPATH:"packages\Microsoft.Web.WebView2\build\native\x64" ^
-    WebView2Loader.dll.lib user32.lib ole32.lib gdi32.lib shlwapi.lib shell32.lib ^
+    WebView2Loader.dll.lib user32.lib ole32.lib gdi32.lib shlwapi.lib shell32.lib advapi32.lib crypt32.lib ^
     /OUT:"DarkComHeadless.dll"
-
 
 if exist DarkComHeadless.dll (
     echo.

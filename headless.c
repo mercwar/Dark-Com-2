@@ -177,7 +177,10 @@ EXPORT int DarkCom_ExecuteFetch(const char* url, const char* method, const char*
     ICoreWebView2_add_WebMessageReceived(g_Eng.webView, &msgHandler, &msgToken);
 
     wchar_t jsScript[16384];
-    if (postData) {
+    // FIX: Only inject body if postData is present AND method is NOT GET or HEAD
+    int hasBody = (postData && _stricmp(method, "GET") != 0 && _stricmp(method, "HEAD") != 0);
+
+    if (hasBody) {
         wchar_t wPostData[4096];
         MultiByteToWideChar(CP_UTF8, 0, postData, -1, wPostData, 4096);
         swprintf_s(jsScript, 16384,

@@ -1,119 +1,98 @@
-// ============================================================================
-// dc2url.c - Curl-Compatible CLI Wrapper for DarkComHeadless Engine
-// ============================================================================
-#define _CRT_SECURE_NO_WARNINGS
-#include <windows.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <io.h>
-#include <fcntl.h>
-#include <wincrypt.h>
+@echo off
+:: InstallShield Subsystem: Force Elevated Administrative Token Context
+:: -----------------------------------------------------------------------------
+net session >nul 2>&1 || (powershell -Command "Start-Process '%~f0' -Verb RunAs" & exit /b)
 
-typedef int (*pfnDarkCom_ExecuteFetch)(const char* url, const char* method, const char* postData, char* outBuffer, DWORD outBufferSize);
-typedef void (*pfnDarkCom_ShutdownEngine)(void);
+setlocal DisableDelayedExpansion
 
-HMODULE LoadSystemDarkComHeadless(void);
+:: =========================================================================
+:: TARGET SYSTEM DIRECTORY MAPPING
+:: =========================================================================
+set "TARGET_BASE=C:\Program Files\dc2url\v1.0"
+set "TARGET_DIR=%TARGET_BASE%\exec"
+set "FINAL_EXE_PATH=%TARGET_DIR%\eclipse.exe"
 
-static void PrintUsage(void) {
-    printf("============================================================\n");
-    printf("  Dark-Com-2 Curl-Compatible Console Wrapper (dc2url)\n");
-    printf("============================================================\n");
-    printf("Usage:    dc2url [options] <url>\n\n");
-    printf("Options:\n");
-    printf("  -X, --request <method>    Specify request method (GET, POST)\n");
-    printf("  -d, --data <data>         Pass payload string for requests\n");
-    printf("  -o, --output <file>       Write raw response body directly to file\n");
-    printf("  -v, --verbose             Enable verbose logs\n");
-    printf("============================================================\n");
-}
+if not exist "%TARGET_DIR%" mkdir "%TARGET_DIR%"
 
-int main(int argc, char* argv[]) {
-    _setmode(_fileno(stdout), _O_BINARY);
+title InstallShield (R) Setup Launcher v1.0 :: Eclipse Tray Master Deployment Engine
+mode con: cols=120 lines=34
 
-    if (argc < 2) {
-        PrintUsage();
-        return 1;
-    }
+chcp 65001 >nul 2>&1
+color 0E
 
-    HMODULE hDll = LoadSystemDarkComHeadless();
-    if (!hDll) {
-        fprintf(stderr, "[-] Fatal Error: Failed to resolve or load DarkComHeadless.dll from system path.\n");
-        return 1;
-    }
+:: Force TrueColor Console Canvas Context Allocation
+reg add "HKCU\Console" /v VirtualTerminalLevel /t REG_DWORD /d 1 /f >nul 2>&1
+for /f %%a in ('echo prompt $E^|cmd') do set "E=%%a"
+set "RESET=%E%[0m"
+set "BG_GLASS=%E%[48;2;10;10;12m"
+set "O1=%E%[38;2;255;68;0m"
+set "O2=%E%[38;2;255;110;0m"
+set "O3=%E%[38;2;255;153;0m"
+set "Y1=%E%[38;2;255;200;0m"
+set "Y2=%E%[38;2;255;235;0m"
+set "TXT=%E%[38;2;240;240;240m"
 
-    pfnDarkCom_ExecuteFetch DarkCom_ExecuteFetch = (pfnDarkCom_ExecuteFetch)GetProcAddress(hDll, "DarkCom_ExecuteFetch");
-    pfnDarkCom_ShutdownEngine RunHeadlessShutdown = (pfnDarkCom_ShutdownEngine)GetProcAddress(hDll, "RunHeadlessShutdown");
+cls
+echo %BG_GLASS%
+cls
 
-    if (!DarkCom_ExecuteFetch) {
-        fprintf(stderr, "[-] Fatal Error: Export 'DarkCom_ExecuteFetch' not found in DLL.\n");
-        return 1;
-    }
+echo.
+echo %O1%        ███████╗ ██████╗██╗     ██╗██████╗ ███████╗███████╗%RESET%%BG_GLASS%
+echo %O2%        ██╔════╝██╔════╝██║     ██║██╔══██╗██╔════╝██╔════╝%RESET%%BG_GLASS%
+echo %O3%        █████╗  ██║     ██║     ██║██████╔╝███████╗███████╗%RESET%%BG_GLASS%
+echo %Y1%        ██╔══╝  ██║     ██║     ██║██╔═══╝ ╚════██║╚════██║%RESET%%BG_GLASS%
+echo %Y2%        ███████╗╚██████╗███████╗██║██║     ███████║███████║%RESET%%BG_GLASS%
+echo %Y2%        ╚══════╝ ╚═════╝╚══════╝╚═╝╚═╝     ╚══════╝╚══════╝%RESET%%BG_GLASS%
+echo %O2%    ====================================================================================%RESET%%BG_GLASS%
+echo %Y2%                    Eclipse Tray Cyborg Ecosystem Installer :: Mercwar AI%RESET%%BG_GLASS%
+echo %O2%    ====================================================================================%RESET%%BG_GLASS%
+echo.
 
-    const char* targetUrl = NULL;
-    const char* method = "GET";
-    const char* postData = NULL;
-    const char* outputPath = NULL;
-    int verbose = 0;
+:: 1. DOWNLINK ACQUISITION VIA DC2URL
+echo %O2%        [*] Acquiring eclipse.exe via dc2url downlink engine...%RESET%%BG_GLASS%
+dc2url "http://mercwar01.byethost3.com/darkcom2/downlink.php?file=eclipse/eclipse.exe" -o "%FINAL_EXE_PATH%"
 
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-X") == 0 || strcmp(argv[i], "--request") == 0) {
-            if (i + 1 < argc) method = argv[++i];
-        } else if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--data") == 0) {
-            if (i + 1 < argc) postData = argv[++i];
-        } else if (strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--output") == 0) {
-            if (i + 1 < argc) outputPath = argv[++i];
-        } else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--verbose") == 0) {
-            verbose = 1;
-        } else if (argv[i][0] != '-') {
-            targetUrl = argv[i];
-        }
-    }
+if not exist "%FINAL_EXE_PATH%" (
+    echo %O1%        [AVIS FAILED] dc2url execution failed to fetch or write the binary.%RESET%%BG_GLASS%
+    goto :finish
+) else (
+    echo                      [SUCCESS] Downlink completed successfully.
+)
 
-    if (!targetUrl) {
-        PrintUsage();
-        return 1;
-    }
+:: 2. WINDOWS APP PATHS CONFIGURATION
+echo %O2%        [*] Registering Eclipse App Paths into Registry...%RESET%%BG_GLASS%
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\App Paths\eclipse.exe" /f /ve /t REG_SZ /d "%FINAL_EXE_PATH%" >nul 2>&1
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\App Paths\eclipse.exe" /f /v "Path" /t REG_SZ /d "%TARGET_DIR%" >nul 2>&1
 
-    if (verbose) fprintf(stderr, "[VERBOSE] Executing request via DarkComHeadless DLL...\n");
+:: 3. CONTROL PANEL ADD/REMOVE PROGRAMS REGISTRATION
+echo %O2%        [*] Injecting Windows Add/Remove Programs Metadata...%RESET%%BG_GLASS%
+set "UNINSTALL_KEY=HKLM\Software\Microsoft\Windows\CurrentVersion\Uninstall\eclipse"
+reg add "%UNINSTALL_KEY%" /f /v "DisplayName" /t REG_SZ /d "Eclipse for Mercwar AI" >nul 2>&1
+reg add "%UNINSTALL_KEY%" /f /v "UninstallString" /t REG_SZ /d "\"%TARGET_BASE%\uninstall.bat\"" >nul 2>&1
+reg add "%UNINSTALL_KEY%" /f /v "Publisher" /t REG_SZ /d "Mercwar AI" >nul 2>&1
+reg add "%UNINSTALL_KEY%" /f /v "EstimatedSize" /t REG_DWORD /d 250 >nul 2>&1
+reg add "%UNINSTALL_KEY%" /f /v "NoModify" /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "%UNINSTALL_KEY%" /f /v "NoRepair" /t REG_DWORD /d 1 /f >nul 2>&1
 
-    char* responseBuffer = (char*)malloc(4194304);
-    if (!responseBuffer) return 1;
-    responseBuffer[0] = '\0';
+:: 4. GENERATE CLEAN UNINSTALLER SCRIPT
+echo %O2%        [*] Compiling local uninstaller payload...%RESET%%BG_GLASS%
+(
+echo @echo off
+echo net session ^>nul 2^>&1 ^|^| ^(powershell -Command "Start-Process '%%~f0' -Verb RunAs" ^& exit /b^)
+echo taskkill /f /im eclipse.exe ^>nul 2^>&1
+echo rmdir /s /q "%TARGET_BASE%"
+echo reg delete "HKLM\Software\Microsoft\Windows\CurrentVersion\App Paths\eclipse.exe" /f ^>nul 2^>&1
+echo reg delete "HKLM\Software\Microsoft\Windows\CurrentVersion\Uninstall\eclipse" /f ^>nul 2^>&1
+echo exit
+) > "%TARGET_BASE%\uninstall.bat"
 
-    int success = DarkCom_ExecuteFetch(targetUrl, method, postData, responseBuffer, 4194304);
-    if (!success) {
-        fprintf(stderr, "[-] Fetch execution failed.\n");
-        free(responseBuffer);
-        return 1;
-    }
+echo                      [SUCCESS] Ecosystem deployment pipeline finalized!
+echo.
 
-    DWORD decodedLen = 0;
-    BYTE* decodedBytes = NULL;
-    if (CryptStringToBinaryA(responseBuffer, 0, CRYPT_STRING_BASE64, NULL, &decodedLen, NULL, NULL)) {
-        decodedBytes = (BYTE*)malloc(decodedLen);
-        CryptStringToBinaryA(responseBuffer, 0, CRYPT_STRING_BASE64, decodedBytes, &decodedLen, NULL, NULL);
-    }
-
-    if (outputPath && decodedBytes) {
-        FILE* f = fopen(outputPath, "wb");
-        if (f) {
-            fwrite(decodedBytes, 1, decodedLen, f);
-            fclose(f);
-        }
-    } else if (decodedBytes) {
-        fwrite(decodedBytes, 1, decodedLen, stdout);
-    } else {
-        printf("%s", responseBuffer);
-    }
-
-    if (decodedBytes) free(decodedBytes);
-    free(responseBuffer);
-
-    if (RunHeadlessShutdown) {
-        RunHeadlessShutdown();
-    }
-
-    FreeLibrary(hDll);
-    return 0;
-}
+:finish
+echo %TXT%        Setup complete. Launching eclipse.exe tray module...%RESET%
+if exist "%FINAL_EXE_PATH%" (
+    start "" "%FINAL_EXE_PATH%"
+)
+pause >nul
+exit /b 0

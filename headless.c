@@ -1,8 +1,10 @@
 // ============================================================================
-// DarkComHeadless.c - Autonomous Headless WebView2 Engine DLL
+// DarkComHeadless.c - Autonomous Headless WebView2 Engine DLL (JS Challenge & Private Server Optimized)
 // ============================================================================
+#define BUILDING_DARKCOM_DLL
+#include "headless.h"
+
 #define COBJMACROS
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <ole2.h>
 #include <webview2.h>
@@ -10,10 +12,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define EXPORT __declspec(dllexport)
-
 typedef struct {
-    char responseBuffer[4194304];
+    char* responseBuffer;
+    DWORD responseBufferSize;
     volatile LONG isComplete;
     volatile LONG isNavComplete;
     volatile LONG isEnvComplete;
@@ -22,6 +23,7 @@ typedef struct {
     ICoreWebView2Controller* webViewCtrl;
     ICoreWebView2* webView;
     HWND hwndParent;
+    wchar_t currentOrigin[1024];
 } HeadlessEngineCtx;
 
 static HeadlessEngineCtx g_Eng = {0};
@@ -65,7 +67,9 @@ static HRESULT STDMETHODCALLTYPE Eng_CtrlCompleted(ICoreWebView2CreateCoreWebVie
 static HRESULT STDMETHODCALLTYPE Eng_MsgReceived(ICoreWebView2WebMessageReceivedEventHandler* This, ICoreWebView2* sender, ICoreWebView2WebMessageReceivedEventArgs* args) {
     LPWSTR msgStr = NULL;
     if (SUCCEEDED(ICoreWebView2WebMessageReceivedEventArgs_TryGetWebMessageAsString(args, &msgStr)) && msgStr) {
-        WideCharToMultiByte(CP_UTF8, 0, msgStr, -1, g_Eng.responseBuffer, sizeof(g_Eng.responseBuffer) - 1, NULL, NULL);
+        if (g_Eng.responseBuffer && g_Eng.responseBufferSize > 0) {
+            WideCharToMultiByte(CP_UTF8, 0, msgStr, -1, g_Eng.responseBuffer, g_Eng.responseBufferSize - 1, NULL, NULL);
+        }
         InterlockedExchange(&g_Eng.isComplete, 1);
         CoTaskMemFree(msgStr);
     }
@@ -84,7 +88,7 @@ static ICoreWebView2CreateCoreWebView2ControllerCompletedHandlerVtbl ctrlVtbl = 
     (void*)Eng_QueryInterface, (void*)Eng_AddRef, (void*)Eng_Release, Eng_CtrlCompleted
 };
 
-EXPORT void DarkCom_ShutdownEngine(void) {
+DARKCOM_API void DarkCom_ShutdownEngine(void) {
     if (g_Eng.webViewCtrl) {
         ICoreWebView2Controller_Close(g_Eng.webViewCtrl);
         ICoreWebView2Controller_Release(g_Eng.webViewCtrl);
@@ -103,7 +107,7 @@ EXPORT void DarkCom_ShutdownEngine(void) {
     memset(&g_Eng, 0, sizeof(g_Eng));
 }
 
-EXPORT int DarkCom_InitEngine(void) {
+DARKCOM_API int DarkCom_InitEngine(void) {
     if (g_Eng.webView) return 1;
 
     HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
@@ -119,7 +123,6 @@ EXPORT int DarkCom_InitEngine(void) {
 
     while (!InterlockedOr(&g_Eng.isEnvComplete, 0)) {
         MSG msg; while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) { TranslateMessage(&msg); DispatchMessageW(&msg); }
-        Sleep(5);
     }
     if (!g_Eng.webViewEnv) return 0;
 
@@ -130,20 +133,25 @@ EXPORT int DarkCom_InitEngine(void) {
 
     while (!InterlockedOr(&g_Eng.isControllerComplete, 0)) {
         MSG msg; while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) { TranslateMessage(&msg); DispatchMessageW(&msg); }
-        Sleep(5);
     }
 
+    g_Eng.currentOrigin[0] = L'\0';
     return (g_Eng.webView != NULL);
 }
 
-EXPORT int DarkCom_ExecuteFetch(const char* url, const char* method, const char* postData, char* outBuffer, DWORD outBufferSize) {
+DARKCOM_API int DarkCom_ExecuteFetch(const char* url, const char* method, const char* postData, char* outBuffer, DWORD outBufferSize) {
     if (!g_Eng.webView) {
         if (!DarkCom_InitEngine()) return 0;
     }
 
+    g_Eng.responseBuffer = outBuffer;
+    g_Eng.responseBufferSize = outBufferSize;
+    g_Eng.responseBuffer[0] = '\0';
+
     wchar_t wUrl[2048];
     MultiByteToWideChar(CP_UTF8, 0, url, -1, wUrl, 2048);
 
+    // Extract target origin (e.g., https://private-server.internal)
     wchar_t wOrigin[1024] = L"http://localhost";
     if (wcsncmp(wUrl, L"http://", 7) == 0 || wcsncmp(wUrl, L"https://", 8) == 0) {
         const wchar_t* pathStart = wcschr(wUrl + 8, L'/');
@@ -155,29 +163,35 @@ EXPORT int DarkCom_ExecuteFetch(const char* url, const char* method, const char*
         }
     }
 
-    InterlockedExchange(&g_Eng.isNavComplete, 0);
-    ICoreWebView2NavigationCompletedEventHandlerVtbl navVtbl = { (void*)Eng_QueryInterface, (void*)Eng_AddRef, (void*)Eng_Release, Eng_NavCompleted };
-    ICoreWebView2NavigationCompletedEventHandler navHandler = { &navVtbl };
-    EventRegistrationToken navToken;
-    ICoreWebView2_add_NavigationCompleted(g_Eng.webView, &navHandler, &navToken);
+    // Only navigate if the target origin changes (maintains session/cookies across requests to the same server)
+    if (wcscmp(g_Eng.currentOrigin, wOrigin) != 0) {
+        InterlockedExchange(&g_Eng.isNavComplete, 0);
+        ICoreWebView2NavigationCompletedEventHandlerVtbl navVtbl = { (void*)Eng_QueryInterface, (void*)Eng_AddRef, (void*)Eng_Release, Eng_NavCompleted };
+        ICoreWebView2NavigationCompletedEventHandler navHandler = { &navVtbl };
+        EventRegistrationToken navToken;
+        ICoreWebView2_add_NavigationCompleted(g_Eng.webView, &navHandler, &navToken);
 
-    ICoreWebView2_Navigate(g_Eng.webView, wOrigin);
-    while (!InterlockedOr(&g_Eng.isNavComplete, 0)) {
-        MSG msg; while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) { TranslateMessage(&msg); DispatchMessageW(&msg); }
-        Sleep(5);
+        ICoreWebView2_Navigate(g_Eng.webView, wOrigin);
+        while (!InterlockedOr(&g_Eng.isNavComplete, 0)) {
+            MSG msg; while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) { TranslateMessage(&msg); DispatchMessageW(&msg); }
+        }
+        ICoreWebView2_remove_NavigationCompleted(g_Eng.webView, navToken);
+        wcscpy_s(g_Eng.currentOrigin, 1024, wOrigin);
     }
-    ICoreWebView2_remove_NavigationCompleted(g_Eng.webView, navToken);
 
     InterlockedExchange(&g_Eng.isComplete, 0);
-    g_Eng.responseBuffer[0] = '\0';
 
     ICoreWebView2WebMessageReceivedEventHandlerVtbl msgVtbl = { (void*)Eng_QueryInterface, (void*)Eng_AddRef, (void*)Eng_Release, Eng_MsgReceived };
     ICoreWebView2WebMessageReceivedEventHandler msgHandler = { &msgVtbl };
     EventRegistrationToken msgToken;
     ICoreWebView2_add_WebMessageReceived(g_Eng.webView, &msgHandler, &msgToken);
 
-    wchar_t jsScript[16384];
-    // FIX: Only inject body if postData is present AND method is NOT GET or HEAD
+    wchar_t* jsScript = (wchar_t*)malloc(16384 * sizeof(wchar_t));
+    if (!jsScript) {
+        ICoreWebView2_remove_WebMessageReceived(g_Eng.webView, msgToken);
+        return 0;
+    }
+
     int hasBody = (postData && _stricmp(method, "GET") != 0 && _stricmp(method, "HEAD") != 0);
 
     if (hasBody) {
@@ -188,9 +202,11 @@ EXPORT int DarkCom_ExecuteFetch(const char* url, const char* method, const char*
             L"  try {"
             L"    let res = await fetch('%ls', { method: '%S', headers: {'Content-Type': 'application/json'}, body: '%ls' });"
             L"    let buf = await res.arrayBuffer();"
-            L"    let bytes = new Uint8Array(buf), binary = '';"
-            L"    for (let i=0; i<bytes.length; i+=0x8000) binary += String.fromCharCode.apply(null, bytes.subarray(i, i+0x8000));"
-            L"    window.chrome.webview.postMessage(btoa(binary));"
+            L"    let bytes = new Uint8Array(buf), chunks = [], chunkSize = 0xFFFF;"
+            L"    for (let i = 0; i < bytes.length; i += chunkSize) {"
+            L"      chunks.push(String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize)));"
+            L"    }"
+            L"    window.chrome.webview.postMessage(btoa(chunks.join('')));"
             L"  } catch(e) { window.chrome.webview.postMessage('ERROR:' + e.toString()); }"
             L"})();",
             wUrl, method, wPostData
@@ -201,9 +217,11 @@ EXPORT int DarkCom_ExecuteFetch(const char* url, const char* method, const char*
             L"  try {"
             L"    let res = await fetch('%ls', { method: '%S' });"
             L"    let buf = await res.arrayBuffer();"
-            L"    let bytes = new Uint8Array(buf), binary = '';"
-            L"    for (let i=0; i<bytes.length; i+=0x8000) binary += String.fromCharCode.apply(null, bytes.subarray(i, i+0x8000));"
-            L"    window.chrome.webview.postMessage(btoa(binary));"
+            L"    let bytes = new Uint8Array(buf), chunks = [], chunkSize = 0xFFFF;"
+            L"    for (let i = 0; i < bytes.length; i += chunkSize) {"
+            L"      chunks.push(String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize)));"
+            L"    }"
+            L"    window.chrome.webview.postMessage(btoa(chunks.join('')));"
             L"  } catch(e) { window.chrome.webview.postMessage('ERROR:' + e.toString()); }"
             L"})();",
             wUrl, method
@@ -213,33 +231,31 @@ EXPORT int DarkCom_ExecuteFetch(const char* url, const char* method, const char*
     ICoreWebView2ExecuteScriptCompletedHandlerVtbl execVtbl = { (void*)Eng_QueryInterface, (void*)Eng_AddRef, (void*)Eng_Release, (void*)Eng_AddRef };
     ICoreWebView2ExecuteScriptCompletedHandler execHandler = { &execVtbl };
     ICoreWebView2_ExecuteScript(g_Eng.webView, jsScript, &execHandler);
+    free(jsScript);
 
     while (!InterlockedOr(&g_Eng.isComplete, 0)) {
         MSG msg; while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) { TranslateMessage(&msg); DispatchMessageW(&msg); }
-        Sleep(5);
     }
 
     ICoreWebView2_remove_WebMessageReceived(g_Eng.webView, msgToken);
-
-    strncpy_s(outBuffer, outBufferSize, g_Eng.responseBuffer, _TRUNCATE);
     return 1;
 }
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved) {
     if (fdwReason == DLL_PROCESS_DETACH) {
-        // Safe detachment check
+        DarkCom_ShutdownEngine();
     }
     return TRUE;
 }
 
-EXPORT int RunHeadlessInit(void) {
+DARKCOM_API int RunHeadlessInit(void) {
     return DarkCom_InitEngine();
 }
 
-EXPORT int RunHeadlessRequest(const char* url, const char* method, const char* postData, char* outBuffer, DWORD outBufferSize) {
+DARKCOM_API int RunHeadlessRequest(const char* url, const char* method, const char* postData, char* outBuffer, DWORD outBufferSize) {
     return DarkCom_ExecuteFetch(url, method, postData, outBuffer, outBufferSize);
 }
 
-EXPORT void RunHeadlessShutdown(void) {
+DARKCOM_API void RunHeadlessShutdown(void) {
     DarkCom_ShutdownEngine();
 }

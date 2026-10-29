@@ -41,6 +41,16 @@ DarkCom-2 is a specialized tool designed to bypass JavaScript bot-checks and con
 
 Key Features
 
+<div style="text-align: center; margin: 24px 0;">
+    <a target="_self" title="CLICK HERE to ENTER the GATEWAY FREE!" href="https://github.com/mercwar/dc2url">
+    <img  
+        src="https://raw.githubusercontent.com/mercwar/dc2url/refs/heads/main/images/dc2url.png" 
+        alt="Eclipse Gateway Interface" 
+        style="width:100%; height:auto; border-radius:12px; box-shadow:0 6px 16px rgba(0,0,0,0.6);"
+    />
+    </a>
+</div>
+
 • Bypasses Security Blocks: Standard tools often fail when web hosts require web browser JavaScript tests. This tool functions like a headless browser, easily clearing those verification challenges.
 • Restores Normal Connections: By running darkcom2.exe, it automatically loads the DarkComHeadless.dll file to fix connection issues and bring back stable, normal request speeds.
 • Flexible Execution: You can install the tool quickly via PowerShell and run it through your preferred environment—whether that is a batch file, CMD, PowerShell, or your own custom code wrapper.

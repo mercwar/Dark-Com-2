@@ -16,8 +16,11 @@ extern "C" {
 // Core engine initialization
 DARKCOM_API int RunHeadlessInit(void);
 
-// Main headless request execution handler matching the DEF file export
+// Main headless request execution handler
 DARKCOM_API int RunHeadlessRequest(const char* url, const char* method, const char* postData, char* outBuffer, DWORD outBufferSize);
+
+// Engine shutdown cleanup
+DARKCOM_API void RunHeadlessShutdown(void);
 
 #ifdef __cplusplus
 }

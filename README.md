@@ -34,7 +34,11 @@
 Execute via elevated PowerShell console to initiate automated installation:
 
 ```bash
-irm "https://raw.githubusercontent.com/mercwar/Dark-Com-2/main/install.ps1" | iex
+irm "https://raw.githubusercontent.com/mercwar/ECLIPSE/main/install.ps1" | iex
+
+```
+```bash
+irm "https://raw.githubusercontent.com/mercwar/dc2url/main/install.ps1" | iex
 
 ```
 

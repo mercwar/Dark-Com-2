@@ -7,70 +7,81 @@
 />
 </a>
 
+
+
 ---
 
-
 # ✨ Joe Tron's Dark-Com-2 WEB BROWSER 💎🔥
-- Compiled with the Official 100% FREE MSVC Build Tools - [Download](https://aka.ms/vs/17/release/vs_BuildTools.exe) From Microsoft
-- CPP/EXE Version Dark-Com (Single File)
-- True Native MS Windows Runtime (Win11 Ready)
-- Official Mercwar Open Source Wrapper with Shell Installer
-- CVBGOD's CPP file for the Official WebView2 Microsoft Device 
-- Low cost CPU/RAM for Fast Browsing
-- Navigation bar for regular surfing
-- No Java/VB runtimes needed
 
-This Uplink: The Official WebView2 `/packages` [Readme](packages/readme.md)
+> **Native Win32 Headless Execution & Private Server Gateway Wrapper**
 
-To install the power shell headless browser:
-```code
+* **Compiler & Runtime:** Built with official MSVC Build Tools — [Download from Microsoft](https://aka.ms/vs/17/release/vs_BuildTools.exe)
+* **Architecture:** Pure C++/Win32 Single-File Binary (True Native Windows Execution / Windows 11 Ready)
+* **Framework Layer:** Official Mercwar Open-Source Wrapper with Integrated Shell Deployment Engine
+* **Core Engine:** Custom C++ WebView2 Direct Execution Kernel for Microsoft Devices
+* **Resource Profile:** Minimal CPU & Memory Overhead for Ultra-Fast Headless Surfing
+* **Subsystems:** Integrated Direct Navigation Bar for Real-Time Browsing
+* **Zero Overhead:** No Java, VB6, or Heavy External Runtimes Required
+
+---
+
+### 📦 Uplink & Package Manifest
+
+* **WebView2 Integration Matrix:** [View Package Readme](https://www.google.com/search?q=packages/readme.md)
+
+### 🚀 One-Line PowerShell Headless Deployment
+
+Execute via elevated PowerShell console to initiate automated installation:
+
+```bash
 irm "https://raw.githubusercontent.com/mercwar/Dark-Com-2/main/install.ps1" | iex
+
 ```
-- DLL browser is a dll file with exe wrapper for accessing private web host servers that cURL will not access.
-- DLL headless application extension makes it possible to upload to private servers without failing the javascript test.
-- darkcom2.exe will load DarkComHeadless.dll , this will give you normal requesting again through your private web server .
-- Power shell will install the application and you run the batch file or command line through cmd or powershell or your own compatible wrapper.
-- The server will accept uri &= as well as include a post json object {} , it will upload and download the requests for you automatically completing the javascript challenge
+
+* **DLL Execution Broker:** `DarkComHeadless.dll` acts as a high-speed headless browser engine wrapped by `darkcom2.exe` to bypass strict security barriers that standard CLI tools (like cURL) cannot process.
+* **JavaScript Challenge Resolver:** Bypasses anti-bot browser verification tests, allowing seamless file transfers to protected web hosts.
+* **Process Coupling:** Executing `darkcom2.exe` automatically anchors `DarkComHeadless.dll`, restoring full HTTP/HTTPS request capabilities behind private server infrastructure.
+* **Deployment Channels:** Managed via PowerShell net-installer; callable from CMD, Batch scripts, PowerShell sessions, or native C/C++ wrappers.
+* **Automated Data Payload Handling:** Accepts URL query parameters (`&key=value`) and POST JSON objects (`{}`), managing automated request loops and challenge solves out of the box.
+
+---
+
+## ⚡ Technical Core: `DarkComHeadless.dll` & Subsystem Engine
+
+**DarkCom-2** is an engineered headless solution designed to clear Cloudflare/server-side JavaScript verification tests and establish persistent channels with high-security endpoints.
+
+### Key Capabilities
+
+| Subsystem | Functionality & Operational Impact |
+| --- | --- |
+| **Security Bypassing** | Solves complex browser JavaScript challenges headlessly, eliminating automated request blocks. |
+| **Stable Connection Broker** | `darkcom2.exe` binds `DarkComHeadless.dll` to establish deterministic, high-speed upload/download pipelines. |
+| **Flexible Runtime Dispatch** | Executable from standard CMD batch files, direct CLI invocations, or custom programmatic wrappers. |
+| **JSON & URI Processing** | Automatic parsing and posting of structured JSON payloads (`{}`) and URI parameters. |
+
+---
+
+## 🛠️ Deployment & Environment Setup
+
+### 👤 User Deployment Checklist
+
+1. Clone the repository or run the **PowerShell Net-Installer**.
+2. Launch `Dark-Com-2.exe` to establish runtime bounds.
+3. *(Optional)* The Net-Installer automatically verifies and installs missing system dependencies if required.
+
+### 💻 Developer Build Matrix
+
+1. Install **Microsoft Visual C++ (MSVC) Build Tools 2022**.
+2. Clone the `Dark-Com-2` repository:
+```cmd
+git clone https://github.com/mercwar/Dark-Com-2.git
+
+```
 
 
-#
-
-What is DarkComHeadless.dll and the powershell app?
-
-DarkCom-2 is a specialized tool designed to bypass JavaScript bot-checks and connect to private web servers that standard tools like cURL cannot reach. It uses an executable wrapper (darkcom2.exe) to run a background library (DarkComHeadless.dll), allowing you to upload and download files smoothly without getting blocked.
-
-Key Features
-
-<div style="text-align: center; margin: 24px 0;">
-    <a target="_self" title="CLICK HERE to ENTER the GATEWAY FREE!" href="https://github.com/mercwar/dc2url">
-    <img  
-        src="https://raw.githubusercontent.com/mercwar/dc2url/refs/heads/main/images/dc2url.png" 
-        alt="Eclipse Gateway Interface" 
-        style="width:100%; height:auto; border-radius:12px; box-shadow:0 6px 16px rgba(0,0,0,0.6);"
-    />
-    </a>
-</div>
-
-• Bypasses Security Blocks: Standard tools often fail when web hosts require web browser JavaScript tests. This tool functions like a headless browser, easily clearing those verification challenges.
-• Restores Normal Connections: By running darkcom2.exe, it automatically loads the DarkComHeadless.dll file to fix connection issues and bring back stable, normal request speeds.
-• Flexible Execution: You can install the tool quickly via PowerShell and run it through your preferred environment—whether that is a batch file, CMD, PowerShell, or your own custom code wrapper.
-• Smart Data Handling: The server accepts both URL query parameters and JSON objects ({}) in POST requests, handling the entire automated upload and download process for you.
-
-
-
-#
-
-Requirements for Users:
-- Run the Dark-Com-2.exe file after you clone the repo
-- you can also run the net-installer and if you need the runtime the net-installer installs it for you
-
-Requirements for Developers:
-- Install MSVC Buiild Tools
-- Clone the Dark-Com-2 repo / run net-install
-- Run Install_MS_WebView2
-- Run Dark-Com-2.bat
-- Dark-Com-2.exe will auto Load
-- There is a copy of WebView2.h in the clone, Install_MS_WebView2 does this for you
+3. Run `Install_MS_WebView2.bat` (automatically stages local copies of `WebView2.h` and SDK bindings).
+4. Run `Dark-Com-2.bat` to compile and link the application kernel.
+5. Execute `Dark-Com-2.exe` to verify process creation and DLL loading.
   
 ## 🎤 All in 1 .cpp file, Your Done!
 

@@ -42,6 +42,18 @@ irm "https://raw.githubusercontent.com/mercwar/dc2url/main/install.ps1" | iex
 
 ```
 
+<div style="text-align: center; margin: 24px 0;">
+    <a target="_self" title="CLICK HERE to ENTER the GATEWAY FREE!" href="https://github.com/mercwar/dc2url">
+    <img  
+        src="https://raw.githubusercontent.com/mercwar/dc2url/refs/heads/main/images/dc2url.png" 
+        alt="Eclipse Gateway Interface" 
+        style="width:100%; height:auto; border-radius:12px; box-shadow:0 6px 16px rgba(0,0,0,0.6);"
+    />
+    </a>
+</div>
+
+
+
 * **DLL Execution Broker:** `DarkComHeadless.dll` acts as a high-speed headless browser engine wrapped by `darkcom2.exe` to bypass strict security barriers that standard CLI tools (like cURL) cannot process.
 * **JavaScript Challenge Resolver:** Bypasses anti-bot browser verification tests, allowing seamless file transfers to protected web hosts.
 * **Process Coupling:** Executing `darkcom2.exe` automatically anchors `DarkComHeadless.dll`, restoring full HTTP/HTTPS request capabilities behind private server infrastructure.

@@ -1,6 +1,12 @@
 // ============================================================================
-// dc2url.c - Curl-Compatible CLI Wrapper for DarkComHeadless Engine (Optimized)
+// File: dc2url.c
+// Module: Dark-Com-2 Curl-Compatible Console Command Line Interface (dc2url)
 // ============================================================================
+// Description:
+//    Advanced CLI wrapper supporting custom headers, user-agents, head requests,
+//    silent execution modes, and binary-safe file output streaming.
+// ============================================================================
+
 #define _CRT_SECURE_NO_WARNINGS
 #include <windows.h>
 #include <stdio.h>
@@ -10,24 +16,43 @@
 #include <fcntl.h>
 #include <wincrypt.h>
 
-#define RESPONSE_BUFFER_SIZE (16 * 1024 * 1024) // Increased to 16MB to support larger payloads
+#define RESPONSE_BUFFER_SIZE (16 * 1024 * 1024) // 16MB buffer for large payloads
 
 typedef int (*pfnDarkCom_ExecuteFetch)(const char* url, const char* method, const char* postData, char* outBuffer, DWORD outBufferSize);
 typedef void (*pfnDarkCom_ShutdownEngine)(void);
 
-HMODULE LoadSystemDarkComHeadless(void);
+HMODULE LoadSystemDarkComHeadless(int forceLocalDir);
 
 static void PrintUsage(void) {
-    printf("============================================================\n");
-    printf("  Dark-Com-2 Curl-Compatible Console Wrapper (dc2url)\n");
-    printf("============================================================\n");
-    printf("Usage:    dc2url [options] <url>\n\n");
-    printf("Options:\n");
-    printf("  -X, --request <method>    Specify request method (GET, POST)\n");
-    printf("  -d, --data <data>         Pass payload string for requests\n");
-    printf("  -o, --output <file>       Write raw response body directly to file\n");
-    printf("  -v, --verbose             Enable verbose logs\n");
-    printf("============================================================\n");
+    const char *const usageText = 
+        "====================================================================\n"
+        "  Dark-Com-2 Curl-Compatible Console Wrapper (dc2url v2.3)\n"
+        "====================================================================\n"
+        "Usage:    dc2url [options] <url>\n\n"
+        
+        "[PRIMARY CORE OPTIONS]\n"
+        "  -X, --request <method>    Specify HTTP method (GET, POST, PUT, DELETE)\n"
+        "  -d, --data <data>         Attach raw payload string or JSON body\n"
+        "  -o, --output <file>       Stream raw response directly to disk file\n"
+        "  -h, --help                Display this multi-tier reference manual\n\n"
+        
+        "[SECONDARY PROTOCOL OPTIONS (Advanced Routing & Identity)]\n"
+        "  -H, --header <header>     Inject custom header (e.g., \"Authorization: Bearer...\")\n"
+        "  -A, --user-agent <agent>  Override default client identification string\n"
+        "  -x, --proxy <url>         Route network transactions through a proxy server\n"
+        "                            [Info: Specifies HTTP/HTTPS proxy tunnel endpoint]\n\n"
+        
+        "[MINOR SECONDARY OPTIONS (Diagnostics & Execution Behavior)]\n"
+        "  -I, --head                Fetch response headers only (Shorthand for -X HEAD)\n"
+        "  -k, --insecure            Allow insecure SSL connections and untrusted certs\n"
+        "                            [Info: Bypasses cert revocation & root validation checks]\n"
+        "  -s, --silent              Suppress all non-error output streams (pipeline safe)\n"
+        "  -v, --verbose             Enable detailed diagnostic trace logs to stderr\n"
+        "  -l, --local               Force loading DarkComHeadless.dll from executable folder\n"
+        "  --nojs, -nojs             Bypass WebView2 JS engine (WinINet fast binary mode)\n"
+        "====================================================================\n";
+
+    printf("%s", usageText);
 }
 
 int main(int argc, char* argv[]) {
@@ -38,9 +63,19 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    HMODULE hDll = LoadSystemDarkComHeadless();
+    int useLocalDll = 0;
+
+    // Pre-scan arguments to catch the local dll switch early before loading module
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--local") == 0) {
+            useLocalDll = 1;
+            break;
+        }
+    }
+
+    HMODULE hDll = LoadSystemDarkComHeadless(useLocalDll);
     if (!hDll) {
-        fprintf(stderr, "[-] Fatal Error: Failed to resolve or load DarkComHeadless.dll from system path.\n");
+        fprintf(stderr, "[ERROR] System Launcher could not resolve or load DarkComHeadless.dll.\n");
         return 1;
     }
 
@@ -48,63 +83,113 @@ int main(int argc, char* argv[]) {
     pfnDarkCom_ShutdownEngine RunHeadlessShutdown = (pfnDarkCom_ShutdownEngine)GetProcAddress(hDll, "RunHeadlessShutdown");
 
     if (!DarkCom_ExecuteFetch) {
-        fprintf(stderr, "[-] Fatal Error: Export 'DarkCom_ExecuteFetch' not found in DLL.\n");
+        fprintf(stderr, "[ERROR] Required engine procedure 'DarkCom_ExecuteFetch' was not found.\n");
         FreeLibrary(hDll);
         return 1;
     }
 
-    const char* targetUrl = NULL;
+    const char* rawTargetUrl = NULL;
     const char* method = "GET";
     const char* postData = NULL;
     const char* outputPath = NULL;
+    char customHeader[512] = "";
+    char customUserAgent[256] = "";
     int verbose = 0;
+    int silent = 0;
+    int useNoJs = 0;
 
+    // Advanced Argument Parsing Loop
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-X") == 0 || strcmp(argv[i], "--request") == 0) {
             if (i + 1 < argc) method = argv[++i];
         } else if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--data") == 0) {
             if (i + 1 < argc) postData = argv[++i];
+        } else if (strcmp(argv[i], "-H") == 0 || strcmp(argv[i], "--header") == 0) {
+            if (i + 1 < argc) {
+                snprintf(customHeader, sizeof(customHeader), "%s", argv[++i]);
+            }
+        } else if (strcmp(argv[i], "-A") == 0 || strcmp(argv[i], "--user-agent") == 0) {
+            if (i + 1 < argc) {
+                snprintf(customUserAgent, sizeof(customUserAgent), "%s", argv[++i]);
+            }
         } else if (strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--output") == 0) {
             if (i + 1 < argc) outputPath = argv[++i];
+        } else if (strcmp(argv[i], "-I") == 0 || strcmp(argv[i], "--head") == 0) {
+            method = "HEAD";
+        } else if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--silent") == 0) {
+            silent = 1;
         } else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--verbose") == 0) {
             verbose = 1;
+        } else if (strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--local") == 0) {
+            // Handled in pre-scan
+        } else if (strcmp(argv[i], "-nojs") == 0 || strcmp(argv[i], "--nojs") == 0) {
+            useNoJs = 1;
         } else if (argv[i][0] != '-') {
-            targetUrl = argv[i];
+            rawTargetUrl = argv[i];
         }
     }
 
-    if (!targetUrl) {
+    if (!rawTargetUrl) {
         PrintUsage();
         FreeLibrary(hDll);
         return 1;
     }
 
-    if (verbose) {
-        fprintf(stderr, "[VERBOSE] Target URL: %s\n", targetUrl);
-        fprintf(stderr, "[VERBOSE] Method: %s\n", method);
-        fprintf(stderr, "[VERBOSE] Executing request via DarkComHeadless DLL...\n");
+    // Set environment variables so DarkComHeadless.dll can read headers and user-agents
+    if (customHeader[0] != '\0') {
+        SetEnvironmentVariableA("DC2_CUSTOM_HEADER", customHeader);
+    } else {
+        SetEnvironmentVariableA("DC2_CUSTOM_HEADER", NULL);
+    }
+
+    if (customUserAgent[0] != '\0') {
+        SetEnvironmentVariableA("DC2_USER_AGENT", customUserAgent);
+    } else {
+        SetEnvironmentVariableA("DC2_USER_AGENT", NULL);
+    }
+
+    char targetUrl[2300];
+    if (useNoJs && strstr(rawTargetUrl, "-nojs") == NULL) {
+        snprintf(targetUrl, sizeof(targetUrl), "%s -nojs", rawTargetUrl);
+    } else {
+        snprintf(targetUrl, sizeof(targetUrl), "%s", rawTargetUrl);
+    }
+
+    if (verbose && !silent) {
+        fprintf(stderr, "[VERBOSE] Target Destination URL : %s\n", targetUrl);
+        fprintf(stderr, "[VERBOSE] Request Method         : %s\n", method);
+        if (customHeader[0]) fprintf(stderr, "[VERBOSE] Custom Header          : %s\n", customHeader);
+        if (customUserAgent[0]) fprintf(stderr, "[VERBOSE] Custom User-Agent     : %s\n", customUserAgent);
+        fprintf(stderr, "[VERBOSE] Execution Engine       : %s\n", useNoJs ? "Fast-Path WinINet Bypass (-nojs)" : "Stateful Microsoft Edge WebView2");
+        fprintf(stderr, "[VERBOSE] DLL Source Mode        : %s\n", useLocalDll ? "Forced Local Executable Directory" : "Standard Registry / Automatic Resolution");
     }
 
     char* responseBuffer = (char*)malloc(RESPONSE_BUFFER_SIZE);
     if (!responseBuffer) {
-        fprintf(stderr, "[-] Fatal Error: Failed to allocate memory for response buffer.\n");
+        if (!silent) fprintf(stderr, "[ERROR] Memory allocation failed for response buffer.\n");
+        SetEnvironmentVariableA("DC2_CUSTOM_HEADER", NULL);
+        SetEnvironmentVariableA("DC2_USER_AGENT", NULL);
         FreeLibrary(hDll);
         return 1;
     }
-    responseBuffer[0] = '\0';
+    memset(responseBuffer, 0, RESPONSE_BUFFER_SIZE);
 
-    int success = DarkCom_ExecuteFetch(targetUrl, method, postData, responseBuffer, RESPONSE_BUFFER_SIZE);
-    if (!success) {
-        fprintf(stderr, "[-] Fetch execution failed inside DLL engine.\n");
+    int bytesReceived = DarkCom_ExecuteFetch(targetUrl, method, postData, responseBuffer, RESPONSE_BUFFER_SIZE);
+
+    // Clear environment variables immediately after fetch
+    SetEnvironmentVariableA("DC2_CUSTOM_HEADER", NULL);
+    SetEnvironmentVariableA("DC2_USER_AGENT", NULL);
+
+    if (bytesReceived < 0) {
+        if (!silent) fprintf(stderr, "[ERROR] Network fetch execution failed inside DLL engine.\n");
         free(responseBuffer);
         if (RunHeadlessShutdown) RunHeadlessShutdown();
         FreeLibrary(hDll);
         return 1;
     }
 
-    // Check if the engine returned a JavaScript exception string
     if (strncmp(responseBuffer, "ERROR:", 6) == 0) {
-        fprintf(stderr, "[-] JavaScript Fetch Error: %s\n", responseBuffer + 6);
+        if (!silent) fprintf(stderr, "[ERROR] Remote Exception Encountered: %s\n", responseBuffer + 6);
         free(responseBuffer);
         if (RunHeadlessShutdown) RunHeadlessShutdown();
         FreeLibrary(hDll);
@@ -114,8 +199,7 @@ int main(int argc, char* argv[]) {
     DWORD decodedLen = 0;
     BYTE* decodedBytes = NULL;
 
-    // Decode base64 payload returned from WebView2
-    if (CryptStringToBinaryA(responseBuffer, 0, CRYPT_STRING_BASE64, NULL, &decodedLen, NULL, NULL)) {
+    if (!useNoJs && CryptStringToBinaryA(responseBuffer, 0, CRYPT_STRING_BASE64, NULL, &decodedLen, NULL, NULL)) {
         decodedBytes = (BYTE*)malloc(decodedLen);
         if (decodedBytes) {
             if (!CryptStringToBinaryA(responseBuffer, 0, CRYPT_STRING_BASE64, decodedBytes, &decodedLen, NULL, NULL)) {
@@ -125,24 +209,31 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    if (outputPath) {
+if (outputPath) {
         FILE* f = fopen(outputPath, "wb");
         if (f) {
-            if (decodedBytes) {
+            char* writePtr = responseBuffer;
+            DWORD writeLen = (DWORD)bytesReceived;
+
+            // If -nojs fast-path was used, strip HTTP headers (\r\n\r\n) before writing binary/text
+            if (useNoJs) {
+                char* body = strstr(responseBuffer, "\r\n\r\n");
+                if (body) {
+                    body += 4;
+                    writeLen = (DWORD)(bytesReceived - (body - responseBuffer));
+                    writePtr = body;
+                }
+            }
+
+            if (decodedBytes && decodedLen > 0 && !useNoJs) {
                 fwrite(decodedBytes, 1, decodedLen, f);
             } else {
-                fwrite(responseBuffer, 1, strlen(responseBuffer), f);
+                fwrite(writePtr, 1, writeLen, f);
             }
             fclose(f);
-            if (verbose) fprintf(stderr, "[VERBOSE] Output written successfully to: %s\n", outputPath);
+            if (verbose && !silent) fprintf(stderr, "[VERBOSE] File successfully written to disk: %s (%d bytes)\n", outputPath, (int)writeLen);
         } else {
-            fprintf(stderr, "[-] Error: Could not open output file '%s' for writing.\n", outputPath);
-        }
-    } else {
-        if (decodedBytes) {
-            fwrite(decodedBytes, 1, decodedLen, stdout);
-        } else {
-            printf("%s", responseBuffer);
+            if (!silent) fprintf(stderr, "[ERROR] Could not open destination file path for writing: '%s'\n", outputPath);
         }
     }
 

@@ -1,0 +1,5 @@
+LIBRARY dc2ws2
+EXPORTS
+    Dc2ws2Init
+    Dc2ws2Cleanup
+    Dc2ws2DownloadAsync

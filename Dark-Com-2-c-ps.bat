@@ -1,7 +1,10 @@
 @echo off
+setlocal enabledelayedexpansion
+cd /d "%~dp0"
+
 echo ============================================
-echo  AIFVS-ARTIFACT: Dark-Com-2.bat [POWERSHELL CONSOLE EDITION]
-echo  Auto MSVC env + Auto Dependency + headless_ps Command App
+echo   AIFVS-ARTIFACT: Dark-Com-2-c-ps.bat [POWERSHELL CONSOLE EDITION]
+echo   Auto MSVC env + Auto Dependency + headless_ps Command App
 echo ============================================
 
 :: Force execution context to lock directly onto the script's home folder location
@@ -10,6 +13,7 @@ cd /d "%~dp0"
 :: Flush previous operational application states and runtime cached objects
 if exist dc2url.exe del /f /q dc2url.exe
 if exist headless_ps.obj del /f /q headless_ps.obj
+if exist system_loader.obj del /f /q system_loader.obj
 if exist resource.res del /f /q resource.res
 
 :: Initialize local compiler dependencies if environment context paths are blank
@@ -18,6 +22,10 @@ if not defined VCINSTALLDIR (
         call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" x64
     ) else if exist "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" (
         call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x64
+    ) else if exist "C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvarsall.bat" (
+        call "C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvarsall.bat" x64
+    ) else if exist "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" (
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
     ) else (
         echo ERROR: Visual Studio vcvarsall.bat environment initializer script not found.
         goto end
@@ -41,7 +49,7 @@ if not exist "packages\Microsoft.Web.WebView2" (
         
         if exist "webview2_pkg.zip" del /f /q webview2_pkg.zip
         
-        :: FIXED: Corrected NuGet V2 direct package download endpoint stream URL
+        :: NuGet V2 direct package download endpoint stream URL
         curl -s -L -o webview2_pkg.zip "https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2"
         
         if exist "webview2_pkg.zip" (
@@ -64,6 +72,11 @@ if not exist headless_ps.c (
     goto end
 )
 
+if not exist system_loader.c (
+    echo ERROR: System loader source file 'system_loader.c' is missing!
+    goto end
+)
+
 echo Compiling embedded binary resource layout assets...
 set "RES_FILE="
 if exist favi-con.ico (
@@ -78,7 +91,6 @@ if exist favi-con.ico (
     echo WARNING: favi-con.ico was missing! Skipping embedding step...
 )
 
-
 echo Building PowerShell command-line wrapper app: dc2url.exe
 
 :: Dynamically calculate library path tracking matrices
@@ -90,11 +102,11 @@ if not exist "%LIB_DIR%\WebView2Loader.dll.lib" (
 )
 
 :: Completed cl compilation matrix block with WebView2 include/lib paths included
-cl ^
+cl.exe ^
     headless_ps.c ^
     system_loader.c ^
     /O2 ^
-    /DUNICODE /D_UNICODE ^
+    /DUNICODE /D_UNICODE /D_CRT_SECURE_NO_WARNINGS ^
     /TC ^
     /I"packages\Microsoft.Web.WebView2\build\native\include" ^
     /I"include" ^
@@ -105,6 +117,7 @@ cl ^
     /SUBSYSTEM:CONSOLE ^
     user32.lib ole32.lib advapi32.lib crypt32.lib shlwapi.lib shell32.lib ^
     /OUT:"dc2url.exe"
+
 if exist dc2url.exe (
     echo.
     echo Build Complete: dc2url.exe

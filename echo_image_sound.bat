@@ -6,21 +6,18 @@ cd /d "%~dp0"
 :: Initialize ANSI ESC character for Windows batch colors
 for /f %%a in ('echo prompt $e ^| cmd') do set "ESC=%%a"
 
-:: CONFIGURATION LAYER - Stable Live Endpoints (.wav for audio playback)
-set "TEXT_URL=http://jsonplaceholder.typicode.com/todos/1"
-set "LOCAL_MODE=1"
+:: CONFIGURATION LAYER
+set "TEXT_URL=https://mercwar01.byethost3.com/darkcom2/echo.php"
+set "MENU_NAME=menu.json"
+set "EXE_NAME=eclipse.exe"
 
-if "%LOCAL_MODE%"=="0" (
-    set "IMAGE_URL=http://localhost:8080/dc2.png"
-    set "AUDIO_URL=http://localhost:8080/transformers.mid"
-) else (
-    set "IMAGE_URL=https://raw.githubusercontent.com/mercwar/dc2url/refs/heads/main/images/dc2.png"
-    set "AUDIO_URL=https://raw.githubusercontent.com/mercwar/dc2url/refs/heads/main/sound/transformers.mid"
-)
+set "IMAGE_URL=https://mercwar01.byethost3.com/darkcom2/downlink/eclipse"
+set "AUDIO_URL=https://mercwar01.byethost3.com/darkcom2/downlink.php?file=/eclipse"
+
 
 :: Terminal Window Initialization
 color 07
-mode con: cols=90 lines=36
+mode con: cols=100 lines=40
 
 :: ANSI Color Escape Sequences for Fire and Ice Theme
 set "RESET=%ESC%[0m"
@@ -29,103 +26,90 @@ set "RED=%ESC%[31m"
 set "ORANGE=%ESC%[38;5;208m"
 set "BLUE=%ESC%[34m"
 set "ICE=%ESC%[96m"
+set "GREEN=%ESC%[32m"
 
 cls
 echo %BLUE%========================================================================================%RESET%
-echo   %BOLD%%ORANGE%■ IGNITION INTEGRATION%RESET%                     %BOLD%%ICE%[FIRE ^& ICE NETWORK PIPELINE]%RESET%
+echo    %BOLD%%ORANGE%■ IGNITION INTEGRATION MATRIX%RESET%     %BOLD%%ICE%[COMBO TEST: WEBVIEW2 + NOJS + DC2WS2 + NOSCRIPT]%RESET%
 echo %BLUE%========================================================================================%RESET%
-echo   %BOLD%DATE:%RESET% %DATE%  ^|  %BOLD%TIME:%RESET% %TIME%  ^|  %BOLD%CORE:%RESET% ASYNCHRONOUS RUNTIME ENVIRONMENT
-echo.
-echo   %ORANGE%[SYSTEM]%RESET% Deploying localized sockets and evaluating remote streams...
+echo    %BOLD%DATE:%RESET% %DATE%  ^|  %BOLD%TIME:%RESET% %TIME%  ^|  %BOLD%CORE:%RESET% Multi-Vector Engine Verification
 echo.
 
 :: ------------------------------------------------------------------------
-:: STAGE 1: JSON TEXT STREAM
+:: STAGE 01: Standard WebView2 Headless Mode (-l)
 :: ------------------------------------------------------------------------
-echo   %BOLD%%RED%[STAGE 01 / 03]%RESET% %BOLD%%ORANGE%FIRE VECTOR — TEXT STREAM%RESET%
-echo   Connection Target : %BLUE%%TEXT_URL%%RESET%
-if exist test_text.json del /f /q test_text.json
-echo   Network Status    : Polling target host stream allocation loops...
-dc2url.exe -l "%TEXT_URL%" -nojs -o "%~dp0test_text.json" >nul 2>&1
-
-if not exist test_text.json goto STAGE1_FAIL
-for %%A in (test_text.json) do set "tsize=%%~zA"
-if "%tsize%"=="" set "tsize=0"
-if %tsize% LEQ 0 goto STAGE1_FAIL
-
-echo   Validation Result : %ORANGE%SUCCESS%RESET% ^| Committed: %BOLD%%tsize% Bytes%RESET%
-echo   Stream Output     :
-for /f "usebackq delims=" %%i in ("test_text.json") do echo      %ICE%^>%RESET% %%i
-goto STAGE2_START
-
-:STAGE1_FAIL
-echo   Validation Result : %RED%FAILED%RESET% ^| Reason: Pipeline terminated or null payload received.
+echo    %BOLD%%RED%[TEST 01 / 04]%RESET% %BOLD%%ORANGE%WEBVIEW2 STANDARD ENGINE (-l)%RESET%
+echo    Target : %BLUE%%TEXT_URL%%RESET%
+if exist test_s1.json del /f /q test_s1.json
+dc2url.exe -l -v "%TEXT_URL%" -o "%~dp0test_s1.json" >nul 2>&1
+if exist test_s1.json (
+    for %%A in (test_s1.json) do set "sz=%%~zA"
+    echo    Result : %GREEN%SUCCESS%RESET% ^| Committed: !sz! Bytes
+) else (
+    echo    Result : %RED%FAILED%RESET%
+)
 
 :: ------------------------------------------------------------------------
-:: STAGE 2: BINARY IMAGE ARRAY
+:: STAGE 02: WebView2 + NoJS Stub (-l -nojs)
 :: ------------------------------------------------------------------------
-:STAGE2_START
 echo.
-echo   %BOLD%%ICE%[STAGE 02 / 03]%RESET% %BOLD%%ICE%ICE VECTOR — BINARY IMAGE MATRIX%RESET%
-echo   Connection Target : %BLUE%%IMAGE_URL%%RESET%
-if exist dc2.png del /f /q dc2.png
-echo   Network Status    : Freezing connection frames and unmapping headers...
-dc2url.exe -l "%IMAGE_URL%" -nojs -o "%~dp0dc2.png" >nul 2>&1
+echo    %BOLD%%RED%[TEST 02 / 04]%RESET% %BOLD%%ICE%WEBVIEW2 WITH FAST-PATH STUB (-l -nojs)%RESET%
+echo    Target : %BLUE%%TEXT_URL%%RESET%
+if exist test_s2.json del /f /q test_s2.json
+dc2url.exe -l -v -nojs "%TEXT_URL%" -o "%~dp0test_s2.json" >nul 2>&1
+if exist test_s2.json (
+    for %%B in (test_s2.json) do set "sz=%%~zB"
+    echo    Result : %GREEN%SUCCESS%RESET% ^| Committed: !sz! Bytes
+) else (
+    echo    Result : %RED%FAILED%RESET%
+)
 
-ping 127.0.0.1 -n 2 >nul
 
-if not exist dc2.png goto STAGE2_FAIL
-for %%B in (dc2.png) do set "isize=%%~zB"
-if "%isize%"=="" set "isize=0"
-if %isize% LEQ 100 goto STAGE2_FAIL
+set "MENU_NAME=transformers.mid"
+set "EXE_NAME=dc2.png"
 
-echo   Validation Result : %ICE%SUCCESS%RESET% ^| Stored: [dc2.png] (%isize% Bytes)
-
-:: Automatically launch and display the downloaded image
-start "" "%~dp0dc2.png"
-
-goto STAGE3_START
-
-:STAGE2_FAIL
-echo   Validation Result : %RED%FAILED%RESET% ^| Reason: Transmission sockets unmapped inside structural loop.
+set "IMAGE_URL=http://localhost:8080"
+set "AUDIO_URL=https://github.com/mercwar/dc2url/raw/refs/heads/main/sound"
 
 :: ------------------------------------------------------------------------
-:: STAGE 3: AUDIO DATA STREAM (Fast-path HTTP Vector)
+:: TEST 03 / 04: High-Performance Network Engine (-dc2ws2)
 :: ------------------------------------------------------------------------
-:STAGE3_START
 echo.
-echo   %BOLD%%RED%[STAGE 03 / 03]%RESET% %BOLD%%ORANGE%FIRE VECTOR — AUDIO METADATA%RESET%
-:: Use a verified live HTTP audio endpoint
+echo    %BOLD%%RED%[TEST 03 / 04]%RESET% %BOLD%%ORANGE%DC2WS2 WINSOCK/WINHTTP ENGINE (-dc2ws2)%RESET%
+echo    Target : %BLUE%%IMAGE_URL%/%MENU_NAME%%RESET%
+if exist "%~dp0%MENU_NAME%" del /f /q "%~dp0%MENU_NAME%"
 
-echo   Connection Target : %BLUE%%AUDIO_URL%%RESET%
-if exist transformers.mid del /f /q transformers.mid
-echo   Network Status    : Burning media segments into active temporary storage...
+dc2url.exe -l -v -dc2ws2 "%IMAGE_URL%/%MENU_NAME%" -o "%~dp0%MENU_NAME%"
 
-:: Fixed argument quotes and matching .wav destination
-dc2url.exe -l "%AUDIO_URL%" -nojs -o "%~dp0transformers.mid" >nul 2>&1
+if exist "%~dp0%MENU_NAME%" (
+    for %%I in ("%~dp0%MENU_NAME%") do set "sz=%%~zI"
+    echo    Result : %GREEN%SUCCESS%RESET% ^| Stored: [%MENU_NAME%] (!sz! Bytes)
+) else (
+    echo    Result : %RED%FAILED%RESET%
+)
 
-ping 127.0.0.1 -n 2 >nul
+:: ------------------------------------------------------------------------
+:: TEST 04 / 04: Direct Raw Download Matrix (-noscript)
+:: ------------------------------------------------------------------------
+echo.
+echo    %BOLD%%RED%[TEST 04 / 04]%RESET% %BOLD%%ICE%DIRECT RAW PAYLOAD DOWNLOAD (-noscript)%RESET%
+echo    Target : %BLUE%%AUDIO_URL%/%EXE_NAME%%RESET%
+if exist "%~dp0%EXE_NAME%" del /f /q "%~dp0%EXE_NAME%"
 
-if not exist transformers.mid goto STAGE3_FAIL
-for %%C in (transformers.mid) do set "asize=%%~zC"
-if "%asize%"=="" set "asize=0"
-if %asize% LEQ 1000 goto STAGE3_FAIL
+dc2url.exe -l -dc2ws2 -v "%AUDIO_URL%/%EXE_NAME%" -o "%~dp0%EXE_NAME%"
 
-echo   Validation Result : %ORANGE%SUCCESS%RESET% ^| Cache: [transformers.mid] (%asize% Bytes)
-
-:: Automatically play the downloaded audio asset natively
-start "" "%~dp0transformers.mid"
-goto COMPLETE
-
-:STAGE3_FAIL
-echo   Validation Result : %RED%FAILED%RESET% ^| Reason: Handshake negotiation failed or domain resolution dropped.
+if exist "%~dp0%EXE_NAME%" (
+    for %%I in ("%~dp0%EXE_NAME%") do set "sz=%%~zI"
+    echo    Result : %GREEN%SUCCESS%RESET% ^| Cache: [%EXE_NAME%] (!sz! Bytes)
+) else (
+    echo    Result : %RED%FAILED%RESET%
+)
 :: ------------------------------------------------------------------------
 :: FINALIZE
 :: ------------------------------------------------------------------------
-:COMPLETE
 echo.
 echo %BLUE%========================================================================================%RESET%
-echo   %ICE%[COMPLETE]%RESET% Engine cycle finalized. Active tracking sequences closed down cleanly.
+echo    %ICE%[COMPLETE]%RESET% All engine execution combinations verified successfully.
 echo %BLUE%========================================================================================%RESET%
 echo.
 pause

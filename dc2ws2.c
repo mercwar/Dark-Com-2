@@ -1,3 +1,8 @@
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
+#define BUILDING_DC2WS2_DLL
 #include "dc2ws2.h"
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -5,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "winhttp.lib")
@@ -61,7 +67,6 @@ static void internal_log(const NetworkConfig *config, LogLevel level, const char
     va_end(args);
     config->log_callback(level, log_buffer);
 }
-
 static DWORD WINAPI AsyncWorkerProc(LPVOID lpParam) {
     ThreadContext *context = (ThreadContext *)lpParam;
     if (!context) return 1;
@@ -69,62 +74,92 @@ static DWORD WINAPI AsyncWorkerProc(LPVOID lpParam) {
     NetworkConfig *cfg = &context->config;
     internal_log(cfg, LOG_LEVEL_INFO, "[dc2ws2] Worker activated for URL: %s", context->url);
 
-    // 1. Native WinHTTP TLS/HTTPS Routing for GitHub Assets
+    // 1. Native WinHTTP TLS/HTTPS Routing Pipeline
     if (_strnicmp(context->url, "https://", 8) == 0) {
-        wchar_t wUrl[2048];
+        wchar_t wUrl[2048] = {0};
         MultiByteToWideChar(CP_UTF8, 0, context->url, -1, wUrl, 2048);
 
         HINTERNET hSession = WinHttpOpen(L"dc2ws2-winhttp/2.2", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
-        if (hSession) {
-            URL_COMPONENTSW urlComp = {0};
-            urlComp.dwStructSize = sizeof(urlComp);
-            wchar_t hostName[256] = {0};
-            wchar_t urlPath[2048] = {0};
-            urlComp.lpszHostName = hostName;
-            urlComp.dwHostNameLength = 256;
-            urlComp.lpszUrlPath = urlPath;
-            urlComp.dwUrlPathLength = 2048;
+        if (!hSession) {
+            internal_log(cfg, LOG_LEVEL_ERROR, "[dc2ws2] WinHttpOpen initialization failed.");
+            goto cleanup_context;
+        }
 
-            if (WinHttpCrackUrl(wUrl, (DWORD)wcslen(wUrl), 0, &urlComp)) {
-                HINTERNET hConnect = WinHttpConnect(hSession, hostName, urlComp.nPort ? urlComp.nPort : INTERNET_DEFAULT_HTTPS_PORT, 0);
-                if (hConnect) {
-                    HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", urlPath, NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
-                    if (hRequest) {
-                        DWORD dwFlags = SECURITY_FLAG_IGNORE_UNKNOWN_CA | SECURITY_FLAG_IGNORE_CERT_DATE_INVALID | SECURITY_FLAG_IGNORE_CERT_CN_INVALID;
-                        WinHttpSetOption(hRequest, WINHTTP_OPTION_SECURITY_FLAGS, &dwFlags, sizeof(dwFlags));
+        URL_COMPONENTSW urlComp = {0};
+        urlComp.dwStructSize = sizeof(urlComp);
+        
+        // Expanded array allocations to protect long target parameters and path queries
+        wchar_t hostName[1024] = {0};
+        wchar_t urlPath[4096] = {0};
+        
+        urlComp.lpszHostName = hostName;
+        urlComp.dwHostNameLength = 1024;
+        urlComp.lpszUrlPath = urlPath;
+        urlComp.dwUrlPathLength = 4096;
 
-                        LPCWSTR headers = L"User-Agent: curl/8.4.0\r\nAccept: */*\r\nAccept-Encoding: identity\r\n";
-                        if (WinHttpSendRequest(hRequest, headers, -1L, WINHTTP_NO_REQUEST_DATA, 0, 0, 0) &&
-                            WinHttpReceiveResponse(hRequest, NULL)) {
-                            
-                            FILE *f = NULL;
-                            if (fopen_s(&f, context->dest_path, "wb") == 0 && f) {
-                                DWORD downloaded = 0;
-                                char buffer[8192];
-                                do {
-                                    downloaded = 0;
-                                    if (WinHttpReadData(hRequest, buffer, sizeof(buffer), &downloaded) && downloaded > 0) {
-                                        fwrite(buffer, 1, downloaded, f);
-                                    }
-                                } while (downloaded > 0);
-                                fclose(f);
-                                internal_log(cfg, LOG_LEVEL_INFO, "[dc2ws2] WinHTTP SSL download committed successfully.");
-                            }
-                        }
-                        WinHttpCloseHandle(hRequest);
+        if (!WinHttpCrackUrl(wUrl, (DWORD)wcslen(wUrl), 0, &urlComp)) {
+            internal_log(cfg, LOG_LEVEL_ERROR, "[dc2ws2] WinHttpCrackUrl layout validation parsing failed.");
+            WinHttpCloseHandle(hSession);
+            goto cleanup_context;
+        }
+
+        HINTERNET hConnect = WinHttpConnect(hSession, hostName, urlComp.nPort ? urlComp.nPort : INTERNET_DEFAULT_HTTPS_PORT, 0);
+        if (!hConnect) {
+            internal_log(cfg, LOG_LEVEL_ERROR, "[dc2ws2] WinHttpConnect connection handover failed.");
+            WinHttpCloseHandle(hSession);
+            goto cleanup_context;
+        }
+
+        HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", urlPath, NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
+        if (!hRequest) {
+            internal_log(cfg, LOG_LEVEL_ERROR, "[dc2ws2] WinHttpOpenRequest handle instantiation failed.");
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            goto cleanup_context;
+        }
+
+        DWORD dwFlags = SECURITY_FLAG_IGNORE_UNKNOWN_CA | SECURITY_FLAG_IGNORE_CERT_DATE_INVALID | SECURITY_FLAG_IGNORE_CERT_CN_INVALID;
+        WinHttpSetOption(hRequest, WINHTTP_OPTION_SECURITY_FLAGS, &dwFlags, sizeof(dwFlags));
+
+        LPCWSTR headers = L"User-Agent: curl/8.4.0\r\nAccept: */*\r\nAccept-Encoding: identity\r\n";
+        
+        if (WinHttpSendRequest(hRequest, headers, -1L, WINHTTP_NO_REQUEST_DATA, 0, 0, 0) &&
+            WinHttpReceiveResponse(hRequest, NULL)) {
+            
+            DWORD dwStatusCode = 0;
+            DWORD dwSize = sizeof(dwStatusCode);
+            WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_HEADER_NAME_BY_INDEX, &dwStatusCode, &dwSize, WINHTTP_NO_HEADER_INDEX);
+            
+            if (dwStatusCode >= 400) {
+                internal_log(cfg, LOG_LEVEL_ERROR, "[dc2ws2] Remote server returned HTTP Exception Error: %lu", dwStatusCode);
+            } else {
+                FILE *f = NULL;
+                if (fopen_s(&f, context->dest_path, "wb") == 0 && f) {
+                    DWORD downloaded = 0;
+                    char buffer[16384]; // Doubled stream buffer performance metric
+                    while (WinHttpReadData(hRequest, buffer, sizeof(buffer), &downloaded) && downloaded > 0) {
+                        fwrite(buffer, 1, downloaded, f);
                     }
-                    WinHttpCloseHandle(hConnect);
+                    fclose(f);
+                    internal_log(cfg, LOG_LEVEL_INFO, "[dc2ws2] WinHTTP SSL download committed successfully.");
+                } else {
+                    internal_log(cfg, LOG_LEVEL_ERROR, "[dc2ws2] Dest path file lock execution authorization failed.");
                 }
             }
-            WinHttpCloseHandle(hSession);
+        } else {
+            internal_log(cfg, LOG_LEVEL_ERROR, "[dc2ws2] WinHttp remote session transfer transaction aborted.");
         }
+
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
         goto cleanup_context;
     }
 
-    // 2. Pure WinSock Routing for Plain HTTP (e.g. localhost)
+  // 2. Pure WinSock Routing for Plain HTTP (Bypassed securely if HTTPS routes above)
     char host[HOST_MAX] = {0};
     char port[10] = "80";
-    char path[PATH_MAX_LEN] = "/";
+    char path[2048] = "/";
 
     const char *p = context->url;
     if (_strnicmp(p, "http://", 7) == 0) {
@@ -169,7 +204,7 @@ static DWORD WINAPI AsyncWorkerProc(LPVOID lpParam) {
     DWORD timeout_ms = 15000;
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout_ms, sizeof(timeout_ms));
 
-    char req_buf[2048];
+    char req_buf[4096];
     const char *ua = (cfg->custom_user_agent[0] != '\0') ? cfg->custom_user_agent : "curl/8.4.0";
     int req_len = snprintf(req_buf, sizeof(req_buf),
         "GET %s HTTP/1.1\r\n"
@@ -219,20 +254,39 @@ static DWORD WINAPI AsyncWorkerProc(LPVOID lpParam) {
     closesocket(sock);
 
     if (total_data > 0) {
+        char *body = NULL;
+        size_t body_len = 0;
+        
+        for (size_t i = 0; i + 3 < total_data; i++) {
+            if (response_stream[i] == '\r' && response_stream[i+1] == '\n' &&
+                response_stream[i+2] == '\r' && response_stream[i+3] == '\n') {
+                body = response_stream + i + 4;
+                body_len = total_data - (i + 4);
+                break;
+            }
+        }
+
         FILE *f = NULL;
         if (fopen_s(&f, context->dest_path, "wb") == 0 && f) {
-            fwrite(response_stream, 1, total_data, f);
+            if (body && body_len > 0) {
+                fwrite(body, 1, body_len, f);
+            } else {
+                fwrite(response_stream, 1, total_data, f);
+            }
+            fflush(f);
             fclose(f);
-            internal_log(cfg, LOG_LEVEL_INFO, "[dc2ws2] Raw network stream committed (%zu bytes written).", total_data);
+            internal_log(cfg, LOG_LEVEL_INFO, "[dc2ws2] Raw network stream committed and flushed cleanly.");
         }
     }
 
     free(response_stream);
 
 cleanup_context:
-    if (context->url) free(context->url);
-    if (context->dest_path) free(context->dest_path);
-    free(context);
+    if (context) {
+        if (context->url) free(context->url);
+        if (context->dest_path) free(context->dest_path);
+        free(context);
+    }
     return 0;
 }
 

@@ -83,7 +83,6 @@ echo ============================================
 
 set "LIB_DIR=packages\Microsoft.Web.WebView2\build\native\x64"
 if not exist "%LIB_DIR%" set "LIB_DIR=packages\Microsoft.Web.WebView2\build\native\win-x64"
-
 cl ^
     headless.c ^
     /LD ^
@@ -98,12 +97,10 @@ cl ^
     /MACHINE:X64 ^
     /SUBSYSTEM:WINDOWS ^
     /DEF:"include\darkcom.def" ^
-    /LIBPATH:"%LIB_DIR%" ^
-    dc2ws2.lib ^
+    /LIBPATH:"packages\Microsoft.Web.WebView2\build\native\x64" ^
     WebView2Loader.dll.lib ^
     user32.lib ole32.lib gdi32.lib shlwapi.lib shell32.lib advapi32.lib crypt32.lib ws2_32.lib ^
     /OUT:"DarkComHeadless.dll"
-
 if exist DarkComHeadless.dll (
     echo.
     echo --------------------------------------------

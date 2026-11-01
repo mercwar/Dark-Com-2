@@ -49,7 +49,6 @@ static void PrintUsage(void) {
     printf("%s", usageText);
 }
 
-
 int main(int argc, char* argv[]) {
     _setmode(_fileno(stdout), _O_BINARY);
 
@@ -111,7 +110,7 @@ int main(int argc, char* argv[]) {
         } else if (strcmp(argv[i], "-dc2ws2") == 0 || strcmp(argv[i], "--dc2ws2") == 0 ||
                    strcmp(argv[i], "-noscript") == 0 || strcmp(argv[i], "--noscript") == 0 ||
                    strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--local") == 0) {
-            continue; // Skip safely abstracted framework flags
+            continue;
         } else if (argv[i][0] != '-') {
             rawTargetUrl = argv[i];
         }
@@ -122,7 +121,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // --- ROUTE VECTOR 1: HIGH-PERFORMANCE NATIVE OVERRIDE (dc2ws2 / -noscript) ---
+    // --- ROUTE VECTOR 1: HIGH-PERFORMANCE NATIVE OVERRIDE ---
     if (useDc2Ws2) {
         char dc2ws2Path[MAX_PATH];
         GetModuleFileNameA(NULL, dc2ws2Path, MAX_PATH);
@@ -149,10 +148,6 @@ int main(int argc, char* argv[]) {
         }
 
         Dc2ws2Init();
-
-        if (verbose && !silent) {
-            fprintf(stderr, "[VERBOSE] Routing request via dc2ws2 engine pipeline context.\n");
-        }
 
         char tempOutputPath[MAX_PATH] = "";
         const char* finalOutputPath = outputPath;
@@ -211,20 +206,29 @@ int main(int argc, char* argv[]) {
 
     if (customHeader[0] != '\0') SetEnvironmentVariableA("DC2_CUSTOM_HEADER", customHeader);
     if (customUserAgent[0] != '\0') SetEnvironmentVariableA("DC2_USER_AGENT", customUserAgent);
-
-    // Dynamic switch synthesis handover wrapper
-    char targetUrl[2300];
-    if (useNoJs && strstr(rawTargetUrl, "-nojs") == NULL) {
-        snprintf(targetUrl, sizeof(targetUrl), "%s -nojs", rawTargetUrl);
+    if (useNoJs) {
+        SetEnvironmentVariableA("DC2_NOJS", "1");
     } else {
-        snprintf(targetUrl, sizeof(targetUrl), "%s", rawTargetUrl);
+        SetEnvironmentVariableA("DC2_NOJS", NULL);
     }
+
+    // Signal download mode to headless module if output destination file is specified
+    if (outputPath) {
+        SetEnvironmentVariableA("DC2_DOWNLOAD_MODE", "1");
+    } else {
+        SetEnvironmentVariableA("DC2_DOWNLOAD_MODE", NULL);
+    }
+
+    char targetUrl[2300];
+    snprintf(targetUrl, sizeof(targetUrl), "%s", rawTargetUrl);
 
     char* responseBuffer = (char*)malloc(RESPONSE_BUFFER_SIZE);
     if (!responseBuffer) {
         if (!silent) fprintf(stderr, "[ERROR] Out of memory allocation boundary constraints.\n");
         SetEnvironmentVariableA("DC2_CUSTOM_HEADER", NULL);
         SetEnvironmentVariableA("DC2_USER_AGENT", NULL);
+        SetEnvironmentVariableA("DC2_NOJS", NULL);
+        SetEnvironmentVariableA("DC2_DOWNLOAD_MODE", NULL);
         FreeLibrary(hDll);
         return 1;
     }
@@ -234,6 +238,8 @@ int main(int argc, char* argv[]) {
 
     SetEnvironmentVariableA("DC2_CUSTOM_HEADER", NULL);
     SetEnvironmentVariableA("DC2_USER_AGENT", NULL);
+    SetEnvironmentVariableA("DC2_NOJS", NULL);
+    SetEnvironmentVariableA("DC2_DOWNLOAD_MODE", NULL);
 
     if (bytesReceived < 0 || strncmp(responseBuffer, "ERROR:", 6) == 0) {
         if (!silent) {
@@ -246,49 +252,15 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    DWORD decodedLen = 0;
-    BYTE* decodedBytes = NULL;
-
-    if (!useNoJs && CryptStringToBinaryA(responseBuffer, 0, CRYPT_STRING_BASE64, NULL, &decodedLen, NULL, NULL)) {
-        decodedBytes = (BYTE*)malloc(decodedLen);
-        if (decodedBytes) {
-            if (!CryptStringToBinaryA(responseBuffer, 0, CRYPT_STRING_BASE64, decodedBytes, &decodedLen, NULL, NULL)) {
-                free(decodedBytes);
-                decodedBytes = NULL;
-            }
-        }
-    }
-
+    // --- OUTPUT / STREAM ROUTING & DECODING ---
     FILE* outDest = outputPath ? fopen(outputPath, "wb") : stdout;
     if (outDest) {
-        char* writePtr = responseBuffer;
-        DWORD writeLen = (DWORD)bytesReceived;
-
-        // Bound-safe binary header parsing loop protecting alternating packet chunks
-        if (useNoJs && bytesReceived > 4) {
-            for (DWORD i = 0; i < (DWORD)(bytesReceived - 3); i++) {
-                if (responseBuffer[i] == '\r' && responseBuffer[i+1] == '\n' &&
-                    responseBuffer[i+2] == '\r' && responseBuffer[i+3] == '\n') {
-                    writePtr = responseBuffer + i + 4;
-                    writeLen = (DWORD)(bytesReceived - (i + 4));
-                    break;
-                }
-            }
-        }
-
-        if (decodedBytes && decodedLen > 0 && !useNoJs) {
-            fwrite(decodedBytes, 1, decodedLen, outDest);
-        } else {
-            fwrite(writePtr, 1, writeLen, outDest);
-        }
-        
+        fwrite(responseBuffer, 1, (size_t)bytesReceived, outDest);
         if (outputPath) fclose(outDest);
         else fflush(stdout);
     }
 
-    if (decodedBytes) free(decodedBytes);
     free(responseBuffer);
-
     if (RunHeadlessShutdown) RunHeadlessShutdown();
     FreeLibrary(hDll);
     return 0;

@@ -9,11 +9,10 @@ for /f %%a in ('echo prompt $e ^| cmd') do set "ESC=%%a"
 :: CONFIGURATION LAYER
 set "TEXT_URL=https://mercwar01.byethost3.com/darkcom2/echo.php"
 set "MENU_NAME=menu.json"
-set "EXE_NAME=eclipse.exe"
+set "EXE_NAME=eclipse.cab"
 
 set "IMAGE_URL=https://mercwar01.byethost3.com/darkcom2/downlink/eclipse"
-set "AUDIO_URL=https://mercwar01.byethost3.com/darkcom2/downlink.php?file=/eclipse"
-
+set "AUDIO_URL=https://mercwar01.byethost3.com/darkcom2/downlink/eclipse"
 
 :: Terminal Window Initialization
 color 07
@@ -30,7 +29,7 @@ set "GREEN=%ESC%[32m"
 
 cls
 echo %BLUE%========================================================================================%RESET%
-echo    %BOLD%%ORANGE%■ IGNITION INTEGRATION MATRIX%RESET%     %BOLD%%ICE%[COMBO TEST: WEBVIEW2 + NOJS + DC2WS2 + NOSCRIPT]%RESET%
+echo    %BOLD%%ORANGE%■ IGNITION INTEGRATION MATRIX%RESET%      %BOLD%%ICE%[COMBO TEST: WEBVIEW2 + NOJS + DC2WS2 + NOSCRIPT]%RESET%
 echo %BLUE%========================================================================================%RESET%
 echo    %BOLD%DATE:%RESET% %DATE%  ^|  %BOLD%TIME:%RESET% %TIME%  ^|  %BOLD%CORE:%RESET% Multi-Vector Engine Verification
 echo.
@@ -64,10 +63,8 @@ if exist test_s2.json (
     echo    Result : %RED%FAILED%RESET%
 )
 
-
 set "MENU_NAME=transformers.mid"
 set "EXE_NAME=dc2.png"
-
 set "IMAGE_URL=http://localhost:8080"
 set "AUDIO_URL=https://github.com/mercwar/dc2url/raw/refs/heads/main/sound"
 
@@ -104,6 +101,59 @@ if exist "%~dp0%EXE_NAME%" (
 ) else (
     echo    Result : %RED%FAILED%RESET%
 )
+
+:: ------------------------------------------------------------------------
+:: FINALIZE MATRIX 1
+:: ------------------------------------------------------------------------
+echo.
+echo %BLUE%========================================================================================%RESET%
+echo    %ICE%[COMPLETE]%RESET% Matrix 1 verification complete.
+echo %BLUE%========================================================================================%RESET%
+echo.
+
+:: CONFIGURATION LAYER (Matrix 2 Binary Downloads)
+set "TEXT_URL=https://mercwar01.byethost3.com/darkcom2/echo.php"
+set "MENU_NAME=eclipse.png"
+set "EXE_NAME=eclipse.cab"
+set "IMAGE_URL=https://mercwar01.byethost3.com/darkcom2/downlink/eclipse"
+set "AUDIO_URL=https://mercwar01.byethost3.com/darkcom2/downlink/eclipse"
+
+:: ------------------------------------------------------------------------
+:: TEST 03 / 04 (Matrix 2): Headless WebView2 Render Pipeline (PNG Binary)
+:: ------------------------------------------------------------------------
+echo.
+echo    %BOLD%%RED%[TEST 03 / 04 - BINARY]%RESET% %BOLD%%ORANGE%WEBVIEW2 RENDER ENGINE (-l -v)%RESET%
+echo    Target : %BLUE%%IMAGE_URL%/%MENU_NAME%%RESET%
+if exist "%~dp0%MENU_NAME%" del /f /q "%~dp0%MENU_NAME%"
+
+:: FIXED: Omit -nojs so WebView2 executes the ArrayBuffer fetch script handler for eclipse.png
+dc2url.exe -l -v "%IMAGE_URL%/%MENU_NAME%" -o "%~dp0%MENU_NAME%"
+
+if exist "%~dp0%MENU_NAME%" (
+    for %%I in ("%~dp0%MENU_NAME%") do set "sz=%%~zI"
+    echo    Result : %GREEN%SUCCESS%RESET% ^| Stored: [%MENU_NAME%] (!sz! Bytes)
+) else (
+    echo    Result : %RED%FAILED%RESET%
+)
+
+:: ------------------------------------------------------------------------
+:: TEST 04 / 04 (Matrix 2): Headless WebView2 Render Pipeline (CAB Binary)
+:: ------------------------------------------------------------------------
+echo.
+echo    %BOLD%%RED%[TEST 04 / 04 - BINARY]%RESET% %BOLD%%ICE%WEBVIEW2 RENDER ENGINE (-l -v)%RESET%
+echo    Target : %BLUE%%AUDIO_URL%/%EXE_NAME%%RESET%
+if exist "%~dp0%EXE_NAME%" del /f /q "%~dp0%EXE_NAME%"
+
+:: FIXED: Omit -nojs and ensure -l is active so eclipse.cab streams via ArrayBuffer
+dc2url.exe -l -v "%AUDIO_URL%/%EXE_NAME%" -o "%~dp0%EXE_NAME%"
+
+if exist "%~dp0%EXE_NAME%" (
+    for %%I in ("%~dp0%EXE_NAME%") do set "sz=%%~zI"
+    echo    Result : %GREEN%SUCCESS%RESET% ^| Cache: [%EXE_NAME%] (!sz! Bytes)
+) else (
+    echo    Result : %RED%FAILED%RESET%
+)
+
 :: ------------------------------------------------------------------------
 :: FINALIZE
 :: ------------------------------------------------------------------------
@@ -112,4 +162,5 @@ echo %BLUE%=====================================================================
 echo    %ICE%[COMPLETE]%RESET% All engine execution combinations verified successfully.
 echo %BLUE%========================================================================================%RESET%
 echo.
+
 pause

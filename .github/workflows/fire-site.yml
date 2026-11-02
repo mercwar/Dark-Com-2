@@ -27,6 +27,8 @@ jobs:
 
       - name: "SENTINEL :: Execute fire-site.sh"
         run: |
+          # Strip Windows carriage returns from the file layout dynamically
+          sed -i 's/\r$//' ./fire-site.sh
           chmod +x ./fire-site.sh
           ./fire-site.sh
 

@@ -13,12 +13,12 @@ echo "Generating protected sitemap for: ${BASE_URL}"
 
 # 2. Initialize conformant XML structural headers
 echo '<?xml version="1.0" encoding="UTF-8"?>' > "$OUTPUT_FILE"
-echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' >> "$OUTPUT_FILE"
+echo '<urlset xmlns="http://sitemaps.org">' >> "$OUTPUT_FILE"
 
 # 3. Traversal processing engine with strict asset exclusion filters
 find . -type f -not -path '*/.git/*' -not -name "$OUTPUT_FILE" | while read -r file; do
-    # Strip runtime node path tokens
-    CLEAN_PATH="${file#./}"
+    # Strip runtime path tokens and scrub any unexpected hidden carriage returns inside string lines
+    CLEAN_PATH=$(echo "${file#./}" | tr -d '\r')
     
     # Absolute XML entity compliance validation escaping
     SAFE_PATH=$(echo "$CLEAN_PATH" | sed 's/&/\&amp;/g' | sed 's/</\&lt;/g' | sed 's/>/\&gt;/g' | sed "s/'/\&apos;/g" | sed 's/"/\&quot;/g')

@@ -16,7 +16,7 @@ set "AUDIO_URL=https://mercwar01.byethost3.com/darkcom2/downlink.php?file=/eclip
 
 :: Terminal Window Initialization
 color 07
-mode con: cols=100 lines=40
+mode con: cols=100 lines=60
 
 :: ANSI Color Escape Sequences for Fire and Ice Theme
 set "RESET=%ESC%[0m"
@@ -26,6 +26,7 @@ set "ORANGE=%ESC%[38;5;208m"
 set "BLUE=%ESC%[34m"
 set "ICE=%ESC%[96m"
 set "GREEN=%ESC%[32m"
+set "GRAY=%ESC%[90m"
 
 cls
 echo %BLUE%========================================================================================%RESET%
@@ -41,11 +42,16 @@ echo    %BOLD%%RED%[TEST 01 / 04]%RESET% %BOLD%%ORANGE%WEBVIEW2 STANDARD ENGINE 
 echo    Target : %BLUE%%TEXT_URL%%RESET%
 if exist test_s1.json del /f /q test_s1.json
 dc2url.exe -l -v "%TEXT_URL%" -o "%~dp0test_s1.json"
-if exist test_s1.json (
+
+if not exist test_s1.json (
+    echo    Result : %RED%FAILED%RESET%
+) else (
     for %%A in (test_s1.json) do set "sz=%%~zA"
     echo    Result : %GREEN%SUCCESS%RESET% ^| Committed: !sz! Bytes
-) else (
-    echo    Result : %RED%FAILED%RESET%
+    echo    %GRAY%--- PAYLOAD CONTENT START ---%RESET%
+    type "%~dp0test_s1.json"
+    echo.
+    echo    %GRAY%--- PAYLOAD CONTENT END ---%RESET%
 )
 
 :: ------------------------------------------------------------------------
@@ -56,11 +62,16 @@ echo    %BOLD%%RED%[TEST 02 / 04]%RESET% %BOLD%%ICE%WEBVIEW2 WITH FAST-PATH STUB
 echo    Target : %BLUE%%TEXT_URL%%RESET%
 if exist test_s2.json del /f /q test_s2.json
 dc2url.exe -v -l -nojs "%TEXT_URL%" -o "%~dp0test_s2.json"
-if exist test_s2.json (
+
+if not exist test_s2.json (
+    echo    Result : %RED%FAILED%RESET%
+) else (
     for %%B in (test_s2.json) do set "sz=%%~zB"
     echo    Result : %GREEN%SUCCESS%RESET% ^| Committed: !sz! Bytes
-) else (
-    echo    Result : %RED%FAILED%RESET%
+    echo    %GRAY%--- PAYLOAD CONTENT START ---%RESET%
+    type "%~dp0test_s2.json"
+    echo.
+    echo    %GRAY%--- PAYLOAD CONTENT END ---%RESET%
 )
 
 :: ------------------------------------------------------------------------
@@ -74,14 +85,18 @@ if exist "%~dp0%MENU_NAME%" del /f /q "%~dp0%MENU_NAME%"
 dc2url.exe -l -v "%IMAGE_URL%/%MENU_NAME%" -o "%~dp0%MENU_NAME%"
 
 if exist "%~dp0%MENU_NAME%" (
-    powershell -NoProfile -Command "$f='%~dp0%MENU_NAME%'; if(Test-Path $f){ $txt=[IO.File]::ReadAllText($f); if($txt -match '\<pre\>([\s\S]*?)\<\/pre\>'){ [IO.File]::WriteAllText($f, $Matches[1].Trim()) } }" >nul 2>&1
+    powershell -NoProfile -Command "$f='%~dp0%MENU_NAME%'; if(Test-Path $f){ $txt=[IO.File]::ReadAllText($f); if($txt -match '(?s)<pre>([\s\S]*?)</pre>'){ [IO.File]::WriteAllText($f, $Matches[1].Trim()) } }" >nul 2>&1
 )
 
-if exist "%~dp0%MENU_NAME%" (
+if not exist "%~dp0%MENU_NAME%" (
+    echo    Result : %RED%FAILED%RESET%
+) else (
     for %%C in ("%~dp0%MENU_NAME%") do set "sz=%%~zC"
     echo    Result : %GREEN%SUCCESS%RESET% ^| Stored: [%MENU_NAME%] (!sz! Bytes)
-) else (
-    echo    Result : %RED%FAILED%RESET%
+    echo    %GRAY%--- PAYLOAD CONTENT START ---%RESET%
+    type "%~dp0%MENU_NAME%"
+    echo.
+    echo    %GRAY%--- PAYLOAD CONTENT END ---%RESET%
 )
 
 :: ------------------------------------------------------------------------
@@ -95,14 +110,18 @@ if exist "%~dp0%EXE_NAME%" del /f /q "%~dp0%EXE_NAME%"
 dc2url.exe -l -v -nojs "%AUDIO_URL%/%EXE_NAME%" -o "%~dp0%EXE_NAME%"
 
 if exist "%~dp0%EXE_NAME%" (
-    powershell -NoProfile -Command "$f='%~dp0%EXE_NAME%'; if(Test-Path $f){ $txt=[IO.File]::ReadAllText($f); if($txt -match '\<pre\>([\s\S]*?)\<\/pre\>'){ [IO.File]::WriteAllText($f, $Matches[1].Trim()) } }" >nul 2>&1
+    powershell -NoProfile -Command "$f='%~dp0%EXE_NAME%'; if(Test-Path $f){ $txt=[IO.File]::ReadAllText($f); if($txt -match '(?s)<pre>([\s\S]*?)</pre>'){ [IO.File]::WriteAllText($f, $Matches[1].Trim()) } }" >nul 2>&1
 )
 
-if exist "%~dp0%EXE_NAME%" (
+if not exist "%~dp0%EXE_NAME%" (
+    echo    Result : %RED%FAILED%RESET%
+) else (
     for %%D in ("%~dp0%EXE_NAME%") do set "sz=%%~zD"
     echo    Result : %GREEN%SUCCESS%RESET% ^| Cache: [%EXE_NAME%] (!sz! Bytes)
-) else (
-    echo    Result : %RED%FAILED%RESET%
+    echo    %GRAY%--- PAYLOAD CONTENT START ---%RESET%
+    type "%~dp0%EXE_NAME%"
+    echo.
+    echo    %GRAY%--- PAYLOAD CONTENT END ---%RESET%
 )
 
 :: ------------------------------------------------------------------------

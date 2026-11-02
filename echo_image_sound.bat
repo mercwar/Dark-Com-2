@@ -9,7 +9,7 @@ for /f %%a in ('echo prompt $e ^| cmd') do set "ESC=%%a"
 :: CONFIGURATION LAYER
 set "TEXT_URL=https://mercwar01.byethost3.com/darkcom2/echo.php"
 set "MENU_NAME=menu.json"
-set "EXE_NAME=eclipse.cab"
+set "EXE_NAME=eclipse.zip"
 
 set "IMAGE_URL=https://mercwar01.byethost3.com/darkcom2/downlink/eclipse"
 set "AUDIO_URL=https://mercwar01.byethost3.com/darkcom2/downlink/eclipse"
@@ -110,48 +110,48 @@ echo %BLUE%=====================================================================
 echo    %ICE%[COMPLETE]%RESET% Matrix 1 verification complete.
 echo %BLUE%========================================================================================%RESET%
 echo.
-
 :: CONFIGURATION LAYER (Matrix 2 Binary Downloads)
 set "TEXT_URL=https://mercwar01.byethost3.com/darkcom2/echo.php"
-set "MENU_NAME=eclipse.png"
-set "EXE_NAME=eclipse.cab"
-set "IMAGE_URL=https://mercwar01.byethost3.com/darkcom2/downlink/eclipse"
-set "AUDIO_URL=https://mercwar01.byethost3.com/darkcom2/downlink/eclipse"
+set "M2_NAME1=eclipse.png"
+set "M2_NAME2=eclipse.ico"
+set "M2_URL1=https://mercwar01.byethost3.com/darkcom2/downlink/eclipse"
+set "M2_URL2=https://mercwar01.byethost3.com/darkcom2/downlink/eclipse"
+
+:: SAFE WORKSPACE ISOLATION TARGET
+set "TEST_OUT_DIR=%~dp0dc2_test_cache"
+if not exist "%TEST_OUT_DIR%" mkdir "%TEST_OUT_DIR%"
 
 :: ------------------------------------------------------------------------
-:: TEST 03 / 04 (Matrix 2): Headless WebView2 Render Pipeline (PNG Binary)
+:: TEST 05 / 06: Headless WebView2 Render Pipeline (PNG Binary)
 :: ------------------------------------------------------------------------
-echo.
-echo    %BOLD%%RED%[TEST 03 / 04 - BINARY]%RESET% %BOLD%%ORANGE%WEBVIEW2 RENDER ENGINE (-l -v)%RESET%
-echo    Target : %BLUE%%IMAGE_URL%/%MENU_NAME%%RESET%
-if exist "%~dp0%MENU_NAME%" del /f /q "%~dp0%MENU_NAME%"
+echo    %BOLD%%RED%[TEST 05 / 06 - BINARY]%RESET% %BOLD%%ORANGE%WEBVIEW2 RENDER ENGINE (-l -v)%RESET%
+echo    Target : %BLUE%%M2_URL1%/%M2_NAME1%%RESET%
+if exist "%TEST_OUT_DIR%\%M2_NAME1%" del /f /q "%TEST_OUT_DIR%\%M2_NAME1%"
 
-:: FIXED: Omit -nojs so WebView2 executes the ArrayBuffer fetch script handler for eclipse.png
-dc2url.exe -l -v "%IMAGE_URL%/%MENU_NAME%" -o "%~dp0%MENU_NAME%"
+dc2url.exe -l -v "%M2_URL1%/%M2_NAME1%" -o "%TEST_OUT_DIR%\%M2_NAME1%"
 
-if exist "%~dp0%MENU_NAME%" (
-    for %%I in ("%~dp0%MENU_NAME%") do set "sz=%%~zI"
-    echo    Result : %GREEN%SUCCESS%RESET% ^| Stored: [%MENU_NAME%] (!sz! Bytes)
-) else (
+if not exist "%TEST_OUT_DIR%\%M2_NAME1%" (
     echo    Result : %RED%FAILED%RESET%
+) else (
+    for %%I in ("%TEST_OUT_DIR%\%M2_NAME1%") do set "sz=%%~zI"
+    echo    Result : %GREEN%SUCCESS%RESET% ^| Stored: [%M2_NAME1%] ^(!sz! Bytes^)
 )
 
 :: ------------------------------------------------------------------------
-:: TEST 04 / 04 (Matrix 2): Headless WebView2 Render Pipeline (CAB Binary)
+:: TEST 06 / 06: Headless WebView2 Render Pipeline (ICO Binary)
 :: ------------------------------------------------------------------------
 echo.
-echo    %BOLD%%RED%[TEST 04 / 04 - BINARY]%RESET% %BOLD%%ICE%WEBVIEW2 RENDER ENGINE (-l -v)%RESET%
-echo    Target : %BLUE%%AUDIO_URL%/%EXE_NAME%%RESET%
-if exist "%~dp0%EXE_NAME%" del /f /q "%~dp0%EXE_NAME%"
+echo    %BOLD%%RED%[TEST 06 / 06 - BINARY]%RESET% %BOLD%%ICE%WEBVIEW2 RENDER ENGINE (-l -v)%RESET%
+echo    Target : %BLUE%%M2_URL2%/%M2_NAME2%%RESET%
+if exist "%TEST_OUT_DIR%\%M2_NAME2%" del /f /q "%TEST_OUT_DIR%\%M2_NAME2%"
 
-:: FIXED: Omit -nojs and ensure -l is active so eclipse.cab streams via ArrayBuffer
-dc2url.exe -l -v "%AUDIO_URL%/%EXE_NAME%" -o "%~dp0%EXE_NAME%"
+dc2url.exe -l -v "%M2_URL2%/%M2_NAME2%" -o "%TEST_OUT_DIR%\%M2_NAME2%"
 
-if exist "%~dp0%EXE_NAME%" (
-    for %%I in ("%~dp0%EXE_NAME%") do set "sz=%%~zI"
-    echo    Result : %GREEN%SUCCESS%RESET% ^| Cache: [%EXE_NAME%] (!sz! Bytes)
-) else (
+if not exist "%TEST_OUT_DIR%\%M2_NAME2%" (
     echo    Result : %RED%FAILED%RESET%
+) else (
+    for %%I in ("%TEST_OUT_DIR%\%M2_NAME2%") do set "sz=%%~zI"
+    echo    Result : %GREEN%SUCCESS%RESET% ^| Cache: [%M2_NAME2%] ^(!sz! Bytes^)
 )
 
 :: ------------------------------------------------------------------------

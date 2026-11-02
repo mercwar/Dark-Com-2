@@ -1,436 +1,353 @@
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS
-#endif
+// ============================================================================
+// DarkComHeadless.c - Autonomous Headless WebView2 Engine with Fixed Binary Handling
+// ============================================================================
+#define BUILDING_DARKCOM_DLL
+#include "headless.h"
 
-#define WIN32_LEAN_AND_MEAN
+#define COBJMACROS
 #include <windows.h>
-#include <objbase.h>
+#include <stdbool.h>
+#include <ole2.h>
+#include <webview2.h>
+#include <winhttp.h>
+#include <wininet.h>
+#include <wincrypt.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <wchar.h>
-#include <stdio.h>
-#include <WebView2.h>
-#include <wincrypt.h>
 
-// Global DLL state definitions
-HWND g_hHiddenWnd = NULL;
-ICoreWebView2Controller* g_WebController = NULL;
-ICoreWebView2* g_WebView = NULL;
-ICoreWebView2Environment* g_WebEnvironment = NULL;
-HANDLE g_NavigationEvent = NULL;
-char* g_GlobalOutBuffer = NULL;
-DWORD g_GlobalOutBufferSize = 0;
-volatile LONG g_FetchCompleted = 0;
-wchar_t g_CurrentUrl[2300] = {0};
+#pragma comment(lib, "winhttp.lib")
+#pragma comment(lib, "crypt32.lib")
 
-// Forward declarations
-static LRESULT CALLBACK HeadlessWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+typedef enum {
+    LOG_LEVEL_INFO,
+    LOG_LEVEL_WARNING,
+    LOG_LEVEL_ERROR,
+    LOG_LEVEL_BUFFER_DUMP
+} LogLevel;
 
-// Diagnostic logger stub
-void LogSecurityDiagnostic(const char* context, HRESULT hr, const wchar_t* targetUrl) {
-    // Optional trace hook
-}
+typedef void (CALLBACK *NetworkLogCallback)(LogLevel level, const char *message);
 
-// --- SCRIPT EXECUTION COMPLETED HANDLER ---
 typedef struct {
-    ICoreWebView2ExecuteScriptCompletedHandlerVtbl* lpVtbl;
-    LONG refCount;
-} ScriptCompletedHandler;
+    bool enable_logging;
+    NetworkLogCallback log_callback;
+    size_t initial_buffer_size;
+    size_t max_buffer_size;
+    char custom_user_agent[256];
+} NetworkConfig;
 
-static HRESULT STDMETHODCALLTYPE ScriptCompleted_QueryInterface(ICoreWebView2ExecuteScriptCompletedHandler* This, REFIID riid, void** ppvObject) {
-    if (IsEqualIID(riid, &IID_IUnknown) || IsEqualIID(riid, &IID_ICoreWebView2ExecuteScriptCompletedHandler)) {
-        *ppvObject = This;
-        return S_OK;
+typedef BOOL (WINAPI *pfnDc2ws2Init)(void);
+typedef void (WINAPI *pfnDc2ws2Cleanup)(void);
+typedef HANDLE (WINAPI *pfnDc2ws2DownloadAsync)(const char *url, const char *dest_path, const NetworkConfig *config);
+
+typedef struct {
+    char* responseBuffer;
+    DWORD responseBufferSize;
+    DWORD actualBytesWritten;
+    volatile LONG isComplete;
+    volatile LONG isNavComplete;
+    volatile LONG isEnvComplete;
+    volatile LONG isControllerComplete;
+    ICoreWebView2Environment* webViewEnv;
+    ICoreWebView2Controller* webViewCtrl;
+    ICoreWebView2* webView;
+    HWND hwndParent;
+    wchar_t currentOrigin[1024];
+    EventRegistrationToken msgToken;
+} HeadlessEngineCtx;
+
+static HeadlessEngineCtx g_Eng = {0};
+
+typedef struct { ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandlerVtbl* lpVtbl; LONG refCount; } EnvCompletedHandler;
+typedef struct { ICoreWebView2CreateCoreWebView2ControllerCompletedHandlerVtbl* lpVtbl; LONG refCount; } CtrlCompletedHandler;
+typedef struct { ICoreWebView2WebMessageReceivedEventHandlerVtbl* lpVtbl; LONG refCount; } MsgReceivedHandler;
+typedef struct { ICoreWebView2NavigationCompletedEventHandlerVtbl* lpVtbl; LONG refCount; } NavCompletedHandler;
+typedef struct { ICoreWebView2ExecuteScriptCompletedHandlerVtbl* lpVtbl; LONG refCount; } ExecCompletedHandler;
+
+static HRESULT STDMETHODCALLTYPE Generic_QueryInterface(void* This, REFIID riid, void** ppvObject) {
+    if (!ppvObject) return E_POINTER;
+    *ppvObject = This;
+    return S_OK;
+}
+static ULONG STDMETHODCALLTYPE Generic_AddRef(void* This) {
+    return InterlockedIncrement(&((EnvCompletedHandler*)This)->refCount);
+}
+static ULONG STDMETHODCALLTYPE Generic_Release(void* This) {
+    LONG val = InterlockedDecrement(&((EnvCompletedHandler*)This)->refCount);
+    if (val == 0) free(This);
+    return val;
+}
+
+static HRESULT STDMETHODCALLTYPE Env_Completed(ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* This, HRESULT result, ICoreWebView2Environment* env) {
+    if (SUCCEEDED(result) && env) {
+        g_Eng.webViewEnv = env;
+        ICoreWebView2Environment_AddRef(env);
     }
-    *ppvObject = NULL;
-    return E_NOINTERFACE;
+    InterlockedExchange(&g_Eng.isEnvComplete, 1);
+    return S_OK;
 }
 
-static ULONG STDMETHODCALLTYPE ScriptCompleted_AddRef(ICoreWebView2ExecuteScriptCompletedHandler* This) {
-    ScriptCompletedHandler* impl = (ScriptCompletedHandler*)This;
-    return InterlockedIncrement(&impl->refCount);
+static HRESULT STDMETHODCALLTYPE Ctrl_Completed(ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This, HRESULT result, ICoreWebView2Controller* ctrl) {
+    if (SUCCEEDED(result) && ctrl) {
+        g_Eng.webViewCtrl = ctrl;
+        ICoreWebView2Controller_AddRef(ctrl);
+        ICoreWebView2Controller_get_CoreWebView2(ctrl, &g_Eng.webView);
+    }
+    InterlockedExchange(&g_Eng.isControllerComplete, 1);
+    return S_OK;
 }
 
-static ULONG STDMETHODCALLTYPE ScriptCompleted_Release(ICoreWebView2ExecuteScriptCompletedHandler* This) {
-    ScriptCompletedHandler* impl = (ScriptCompletedHandler*)This;
-    LONG rc = InterlockedDecrement(&impl->refCount);
-    if (rc == 0) free(impl);
-    return rc;
+// Robust Base64 decoder that writes exact binary bytes and tracks actual length
+static DWORD SafeBase64Decode(const wchar_t* wSrc, char* dst, DWORD dstLen) {
+    DWORD wLen = (DWORD)wcslen(wSrc);
+    if (wLen == 0) return 0;
+
+    // Convert wide string to ANSI base64 string directly
+    char* b64 = (char*)malloc(wLen + 1);
+    if (!b64) return 0;
+    WideCharToMultiByte(CP_ACP, 0, wSrc, -1, b64, wLen + 1, NULL, NULL);
+
+    DWORD decodedSize = dstLen;
+    if (!CryptStringToBinaryA(b64, 0, CRYPT_STRING_BASE64, (BYTE*)dst, &decodedSize, NULL, NULL)) {
+        decodedSize = 0;
+    }
+
+    free(b64);
+    return decodedSize;
 }
 
-static HRESULT STDMETHODCALLTYPE ScriptCompleted_Invoke(ICoreWebView2ExecuteScriptCompletedHandler* This, HRESULT errorCode, LPCWSTR resultObjectAsJson) {
-    if (SUCCEEDED(errorCode) && resultObjectAsJson && g_GlobalOutBuffer) {
-        size_t len = wcslen(resultObjectAsJson);
-        char ansiPayload[32 * 1024] = {0};
-        
-        WideCharToMultiByte(CP_UTF8, 0, resultObjectAsJson, (int)len, ansiPayload, sizeof(ansiPayload) - 1, NULL, NULL);
-
-        char* cleanPayload = ansiPayload;
-        if (cleanPayload[0] == '"') cleanPayload++;
-        size_t cleanLen = strlen(cleanPayload);
-        if (cleanLen > 0 && cleanPayload[cleanLen - 1] == '"') {
-            cleanPayload[cleanLen - 1] = '\0';
-            cleanLen--;
-        }
-
-        // Check if payload is JSON/HTML text vs raw base64 binary stream
-        int isJsonText = (cleanPayload[0] == '{' || cleanPayload[0] == '[' || strstr(cleanPayload, "<html") != NULL);
-        if (!isJsonText) {
-            // Unescape json string quotes if returned by JS evaluation
-            snprintf(g_GlobalOutBuffer, g_GlobalOutBufferSize, "%s", cleanPayload);
-        } else {
-            char* preStart = strstr(cleanPayload, "<pre>");
-            if (!preStart) preStart = strstr(cleanPayload, "&lt;pre&gt;");
-
-            if (preStart) {
-                preStart = strchr(preStart, '>');
-                if (preStart) preStart++;
-                
-                char* preEnd = strstr(preStart, "</pre>");
-                if (!preEnd) preEnd = strstr(preStart, "&lt;/pre&gt;");
-
-                if (preEnd) *preEnd = '\0';
-                cleanPayload = preStart;
+static HRESULT STDMETHODCALLTYPE Msg_Received(ICoreWebView2WebMessageReceivedEventHandler* This, ICoreWebView2* sender, ICoreWebView2WebMessageReceivedEventArgs* args) {
+    LPWSTR msgStr = NULL;
+    if (SUCCEEDED(ICoreWebView2WebMessageReceivedEventArgs_TryGetWebMessageAsString(args, &msgStr)) && msgStr) {
+        if (g_Eng.responseBuffer && g_Eng.responseBufferSize > 0) {
+            if (wcsncmp(msgStr, L"ERROR:", 6) == 0) {
+                WideCharToMultiByte(CP_UTF8, 0, msgStr, -1, g_Eng.responseBuffer, g_Eng.responseBufferSize, NULL, NULL);
+                g_Eng.actualBytesWritten = (DWORD)strlen(g_Eng.responseBuffer);
+            } else {
+                // Decode base64 payload precisely into raw binary bytes
+                g_Eng.actualBytesWritten = SafeBase64Decode(msgStr, g_Eng.responseBuffer, g_Eng.responseBufferSize);
             }
-            snprintf(g_GlobalOutBuffer, g_GlobalOutBufferSize, "%s", cleanPayload);
         }
-    } else {
-        snprintf(g_GlobalOutBuffer, g_GlobalOutBufferSize, "ERROR: Script execution or data extraction failed.");
-    }
-    InterlockedExchange(&g_FetchCompleted, 1);
-    SetEvent(g_NavigationEvent);
-    return S_OK;
-}
-
-static ICoreWebView2ExecuteScriptCompletedHandlerVtbl g_ScriptCompletedHandlerVtbl = {
-    ScriptCompleted_QueryInterface, ScriptCompleted_AddRef, ScriptCompleted_Release, ScriptCompleted_Invoke
-};
-
-// --- NAVIGATION COMPLETED EVENT HANDLER ---
-typedef struct {
-    ICoreWebView2NavigationCompletedEventHandlerVtbl* lpVtbl;
-    LONG refCount;
-} NavCompletedHandler;
-
-static HRESULT STDMETHODCALLTYPE NavCompleted_QueryInterface(ICoreWebView2NavigationCompletedEventHandler* This, REFIID riid, void** ppvObject) {
-    if (IsEqualIID(riid, &IID_IUnknown) || IsEqualIID(riid, &IID_ICoreWebView2NavigationCompletedEventHandler)) {
-        *ppvObject = This;
-        return S_OK;
-    }
-    *ppvObject = NULL;
-    return E_NOINTERFACE;
-}
-
-static ULONG STDMETHODCALLTYPE NavCompleted_AddRef(ICoreWebView2NavigationCompletedEventHandler* This) {
-    NavCompletedHandler* impl = (NavCompletedHandler*)This;
-    return InterlockedIncrement(&impl->refCount);
-}
-
-static ULONG STDMETHODCALLTYPE NavCompleted_Release(ICoreWebView2NavigationCompletedEventHandler* This) {
-    NavCompletedHandler* impl = (NavCompletedHandler*)This;
-    LONG rc = InterlockedDecrement(&impl->refCount);
-    if (rc == 0) free(impl);
-    return rc;
-}
-static HRESULT STDMETHODCALLTYPE NavCompleted_Invoke(ICoreWebView2NavigationCompletedEventHandler* This, ICoreWebView2* sender, ICoreWebView2NavigationCompletedEventArgs* args) {
-    BOOL isSuccess = TRUE;
-    if (args) {
-        args->lpVtbl->get_IsSuccess(args, &isSuccess);
-    }
-    
-    LogSecurityDiagnostic("NavCompleted_Invoke", isSuccess ? S_OK : E_FAIL, g_CurrentUrl);
-
-    ScriptCompletedHandler* sHandler = (ScriptCompletedHandler*)malloc(sizeof(ScriptCompletedHandler));
-    if (!sHandler) {
-        if (g_GlobalOutBuffer) {
-            snprintf(g_GlobalOutBuffer, g_GlobalOutBufferSize, "ERROR: Memory allocation failed.");
-        }
-        InterlockedExchange(&g_FetchCompleted, 1);
-        SetEvent(g_NavigationEvent);
-        return E_OUTOFMEMORY;
-    }
-    sHandler->lpVtbl = &g_ScriptCompletedHandlerVtbl;
-    sHandler->refCount = 1;
-
-    // Strip any query string (?...) from the URL before checking file extension
-    wchar_t cleanUrl[2300];
-    wcscpy_s(cleanUrl, 2300, g_CurrentUrl);
-    wchar_t* queryPtr = wcschr(cleanUrl, L'?');
-    if (queryPtr) *queryPtr = L'\0';
-
-    // Find the last dot in the URL path to correctly isolate the file extension
-    wchar_t* dotPtr = wcsrchr(cleanUrl, L'.');
-    int isBinary = 0;
-
-    if (dotPtr) {
-        if (_wcsicmp(dotPtr, L".cab") == 0 || _wcsicmp(dotPtr, L".exe") == 0 ||
-            _wcsicmp(dotPtr, L".png") == 0 || _wcsicmp(dotPtr, L".jpg") == 0 || 
-            _wcsicmp(dotPtr, L".jpeg") == 0 || _wcsicmp(dotPtr, L".zip") == 0 || 
-            _wcsicmp(dotPtr, L".mid") == 0 || _wcsicmp(dotPtr, L".webp") == 0) {
-            isBinary = 1;
-        }
-    }
-
-    if (isBinary) {
-        // Synchronous XHR byte streaming for binary assets
-        sender->lpVtbl->ExecuteScript(sender,
-            L"(function() {"
-            L"  try {"
-            L"    let xhr = new XMLHttpRequest();"
-            L"    xhr.open('GET', window.location.href, false);"
-            L"    xhr.overrideMimeType('text/plain; charset=x-user-defined');"
-            L"    xhr.send(null);"
-            L"    if (xhr.status !== 200) return '';"
-            L"    let text = xhr.responseText;"
-            L"    let binary = '';"
-            L"    for (let i = 0; i < text.length; i++) {"
-            L"      binary += String.fromCharCode(text.charCodeAt(i) & 0xff);"
-            L"    }"
-            L"    return btoa(binary);"
-            L"  } catch(e) { return ''; }"
-            L"})();",
-            (ICoreWebView2ExecuteScriptCompletedHandler*)sHandler);
-    } else {
-        sender->lpVtbl->ExecuteScript(sender, 
-            L"document.documentElement.outerHTML;", 
-            (ICoreWebView2ExecuteScriptCompletedHandler*)sHandler);
-    }
-
-    return S_OK;
-}
-static ICoreWebView2NavigationCompletedEventHandlerVtbl g_NavCompletedHandlerVtbl = {
-    NavCompleted_QueryInterface, NavCompleted_AddRef, NavCompleted_Release, NavCompleted_Invoke
-};
-
-// --- ENVIRONMENT & CONTROLLER COM CALLBACKS ---
-typedef struct {
-    ICoreWebView2CreateCoreWebView2ControllerCompletedHandlerVtbl* lpVtbl;
-    LONG refCount;
-} ControllerHandler;
-
-static HRESULT STDMETHODCALLTYPE Controller_QueryInterface(ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This, REFIID riid, void** ppvObject) {
-    if (IsEqualIID(riid, &IID_IUnknown) || IsEqualIID(riid, &IID_ICoreWebView2CreateCoreWebView2ControllerCompletedHandler)) {
-        *ppvObject = This;
-        return S_OK;
-    }
-    *ppvObject = NULL;
-    return E_NOINTERFACE;
-}
-
-static ULONG STDMETHODCALLTYPE Controller_AddRef(ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This) {
-    ControllerHandler* impl = (ControllerHandler*)This;
-    return InterlockedIncrement(&impl->refCount);
-}
-
-static ULONG STDMETHODCALLTYPE Controller_Release(ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This) {
-    ControllerHandler* impl = (ControllerHandler*)This;
-    LONG rc = InterlockedDecrement(&impl->refCount);
-    if (rc == 0) free(impl);
-    return rc;
-}
-
-static HRESULT STDMETHODCALLTYPE Controller_Invoke(ICoreWebView2CreateCoreWebView2ControllerCompletedHandler* This, HRESULT result, ICoreWebView2Controller* controller) {
-    LogSecurityDiagnostic("Controller_Invoke", result, NULL);
-    if (SUCCEEDED(result) && controller != NULL) {
-        g_WebController = controller;
-        g_WebController->lpVtbl->AddRef(g_WebController);
-        g_WebController->lpVtbl->get_CoreWebView2(g_WebController, &g_WebView);
-        g_WebController->lpVtbl->put_IsVisible(g_WebController, FALSE);
-        
-        EventRegistrationToken token;
-        NavCompletedHandler* nHandler = (NavCompletedHandler*)malloc(sizeof(NavCompletedHandler));
-        if (nHandler) {
-            nHandler->lpVtbl = &g_NavCompletedHandlerVtbl;
-            nHandler->refCount = 1;
-            g_WebView->lpVtbl->add_NavigationCompleted(g_WebView, (ICoreWebView2NavigationCompletedEventHandler*)nHandler, &token);
-        }
-        SetEvent(g_NavigationEvent);
+        InterlockedExchange(&g_Eng.isComplete, 1);
+        CoTaskMemFree(msgStr);
     }
     return S_OK;
 }
 
-static ICoreWebView2CreateCoreWebView2ControllerCompletedHandlerVtbl g_ControllerVtbl = {
-    Controller_QueryInterface, Controller_AddRef, Controller_Release, Controller_Invoke
-};
-
-typedef struct {
-    ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandlerVtbl* lpVtbl;
-    LONG refCount;
-    HWND hWndParent;
-} EnvironmentHandler;
-
-static HRESULT STDMETHODCALLTYPE Env_QueryInterface(ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* This, REFIID riid, void** ppvObject) {
-    if (IsEqualIID(riid, &IID_IUnknown) || IsEqualIID(riid, &IID_ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler)) {
-        *ppvObject = This;
-        return S_OK;
-    }
-    *ppvObject = NULL;
-    return E_NOINTERFACE;
-}
-
-static ULONG STDMETHODCALLTYPE Env_AddRef(ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* This) {
-    EnvironmentHandler* impl = (EnvironmentHandler*)This;
-    return InterlockedIncrement(&impl->refCount);
-}
-
-static ULONG STDMETHODCALLTYPE Env_Release(ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* This) {
-    EnvironmentHandler* impl = (EnvironmentHandler*)This;
-    LONG rc = InterlockedDecrement(&impl->refCount);
-    if (rc == 0) free(impl);
-    return rc;
-}
-
-static HRESULT STDMETHODCALLTYPE Env_Invoke(ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* This, HRESULT result, ICoreWebView2Environment* env) {
-    LogSecurityDiagnostic("Env_Invoke", result, NULL);
-    if (SUCCEEDED(result) && env != NULL) {
-        g_WebEnvironment = env;
-        g_WebEnvironment->lpVtbl->AddRef(g_WebEnvironment);
-
-        EnvironmentHandler* impl = (EnvironmentHandler*)This;
-        ControllerHandler* cHandler = (ControllerHandler*)malloc(sizeof(ControllerHandler));
-        if (cHandler) {
-            cHandler->lpVtbl = &g_ControllerVtbl;
-            cHandler->refCount = 1;
-            env->lpVtbl->CreateCoreWebView2Controller(env, impl->hWndParent, (ICoreWebView2CreateCoreWebView2ControllerCompletedHandler*)cHandler);
-        }
-    }
+static HRESULT STDMETHODCALLTYPE Nav_Completed(ICoreWebView2NavigationCompletedEventHandler* This, ICoreWebView2* sender, ICoreWebView2NavigationCompletedEventArgs* args) {
+    InterlockedExchange(&g_Eng.isNavComplete, 1);
     return S_OK;
 }
 
-static ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandlerVtbl g_EnvVtbl = {
-    Env_QueryInterface, Env_AddRef, Env_Release, Env_Invoke
-};
-
-static void InitializeHeadlessEngine(void) {
-    if (g_WebView) return;
-
-    CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-
-    WNDCLASSEXW wcex = { sizeof(WNDCLASSEXW) };
-    wcex.style         = CS_HREDRAW | CS_VREDRAW;
-    wcex.lpfnWndProc   = HeadlessWndProc;
-    wcex.hInstance     = GetModuleHandle(NULL);
-    wcex.lpszClassName = L"DarkComHeadlessClass";
-    RegisterClassExW(&wcex);
-
-    g_hHiddenWnd = CreateWindowExW(0, L"DarkComHeadlessClass", L"DarkComHeadless",
-        WS_OVERLAPPED, 0, 0, 100, 100, NULL, NULL, wcex.hInstance, NULL);
-
-    g_NavigationEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-    ResetEvent(g_NavigationEvent);
-
-    wchar_t exePathBuffer[MAX_PATH];
-    GetModuleFileNameW(NULL, exePathBuffer, MAX_PATH);
-    wchar_t* lastSlash = wcsrchr(exePathBuffer, L'\\');
-    if (lastSlash) *lastSlash = L'\0';
-    wchar_t cachePath[MAX_PATH];
-    swprintf_s(cachePath, MAX_PATH, L"%s\\browser_cache", exePathBuffer);
-
-    EnvironmentHandler* eHandler = (EnvironmentHandler*)malloc(sizeof(EnvironmentHandler));
-    if (eHandler) {
-        eHandler->lpVtbl = &g_EnvVtbl;
-        eHandler->refCount = 1;
-        eHandler->hWndParent = g_hHiddenWnd;
-
-        HRESULT hr = CreateCoreWebView2EnvironmentWithOptions(NULL, cachePath, NULL, (ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler*)eHandler);
-        LogSecurityDiagnostic("CreateCoreWebView2EnvironmentWithOptions", hr, NULL);
-    }
-
-    DWORD startTime = GetTickCount();
-    MSG msg;
-    while (!g_WebView && (GetTickCount() - startTime < 10000)) {
-        while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-        Sleep(10);
-    }
+static HRESULT STDMETHODCALLTYPE Exec_Completed(ICoreWebView2ExecuteScriptCompletedHandler* This, HRESULT result, LPCWSTR resultObjectAsJson) {
+    return S_OK;
 }
 
-static LRESULT CALLBACK HeadlessWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
-    switch (message) {
-        case WM_DESTROY:
-            PostQuitMessage(0);
-            break;
-        default:
-            return DefWindowProc(hWnd, message, wParam, lParam);
-    }
-    return 0;
-}
+static ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandlerVtbl envVtbl = { (void*)Generic_QueryInterface, (void*)Generic_AddRef, (void*)Generic_Release, Env_Completed };
+static ICoreWebView2CreateCoreWebView2ControllerCompletedHandlerVtbl ctrlVtbl = { (void*)Generic_QueryInterface, (void*)Generic_AddRef, (void*)Generic_Release, Ctrl_Completed };
+static ICoreWebView2WebMessageReceivedEventHandlerVtbl msgVtbl = { (void*)Generic_QueryInterface, (void*)Generic_AddRef, (void*)Generic_Release, Msg_Received };
+static ICoreWebView2NavigationCompletedEventHandlerVtbl navVtbl = { (void*)Generic_QueryInterface, (void*)Generic_AddRef, (void*)Generic_Release, Nav_Completed };
+static ICoreWebView2ExecuteScriptCompletedHandlerVtbl execVtbl = { (void*)Generic_QueryInterface, (void*)Generic_AddRef, (void*)Generic_Release, Exec_Completed };
 
-// --- DLL EXPORTS ---
-__declspec(dllexport) int RunHeadlessRequest(const char* url, const char* method, const char* postData, char* outBuffer, DWORD outBufferSize) {
-    if (!g_WebView) {
-        InitializeHeadlessEngine();
+DARKCOM_API void DarkCom_ShutdownEngine(void) {
+    if (g_Eng.webView) {
+        ICoreWebView2_remove_WebMessageReceived(g_Eng.webView, g_Eng.msgToken);
     }
-    if (!g_WebView) {
-        snprintf(outBuffer, outBufferSize, "ERROR: WebView2 initialization failed.");
-        return -1;
+    if (g_Eng.webViewCtrl) {
+        ICoreWebView2Controller_Close(g_Eng.webViewCtrl);
+        ICoreWebView2Controller_Release(g_Eng.webViewCtrl);
+        g_Eng.webViewCtrl = NULL;
+        g_Eng.webView = NULL;
     }
-    g_GlobalOutBuffer = outBuffer;
-    g_GlobalOutBufferSize = outBufferSize;
-    InterlockedExchange(&g_FetchCompleted, 0);
-    ResetEvent(g_NavigationEvent);
-
-    MultiByteToWideChar(CP_UTF8, 0, url, -1, g_CurrentUrl, (int)(sizeof(g_CurrentUrl) / sizeof(wchar_t)) - 1);
-    
-    HRESULT hr = g_WebView->lpVtbl->Navigate(g_WebView, g_CurrentUrl);
-    if (FAILED(hr)) {
-        snprintf(outBuffer, outBufferSize, "ERROR: Navigation failure (0x%08X).", (unsigned int)hr);
-        return -1;
+    if (g_Eng.webViewEnv) {
+        ICoreWebView2Environment_Release(g_Eng.webViewEnv);
+        g_Eng.webViewEnv = NULL;
     }
-
-    DWORD startTime = GetTickCount();
-    MSG msg;
-    while (g_FetchCompleted == 0 && (GetTickCount() - startTime < 15000)) {
-        while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-        Sleep(10);
-    }
-
-if (g_FetchCompleted == 0) {
-        snprintf(outBuffer, outBufferSize, "ERROR: Extraction timed out within 15 seconds.");
-        return -2;
-    }
-
-    // Return the actual number of bytes written to the buffer
-    return (int)strlen(outBuffer);
-
-}
-
-__declspec(dllexport) void RunHeadlessShutdown(void) {
-    if (g_WebView) {
-        g_WebView->lpVtbl->Release(g_WebView);
-        g_WebView = NULL;
-    }
-    if (g_WebController) {
-        g_WebController->lpVtbl->Release(g_WebController);
-        g_WebController = NULL;
-    }
-    if (g_WebEnvironment) {
-        g_WebEnvironment->lpVtbl->Release(g_WebEnvironment);
-        g_WebEnvironment = NULL;
-    }
-    if (g_NavigationEvent) {
-        CloseHandle(g_NavigationEvent);
-        g_NavigationEvent = NULL;
-    }
-    if (g_hHiddenWnd) {
-        DestroyWindow(g_hHiddenWnd);
-        g_hHiddenWnd = NULL;
+    if (g_Eng.hwndParent) {
+        DestroyWindow(g_Eng.hwndParent);
+        g_Eng.hwndParent = NULL;
     }
     CoUninitialize();
+    memset(&g_Eng, 0, sizeof(g_Eng));
+}
+
+DARKCOM_API int DarkCom_InitEngine(void) {
+    if (g_Eng.webView) return 1;
+
+    HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+    if (FAILED(hr) && hr != RPC_E_CHANGED_MODE) return 0;
+
+    wchar_t cacheDir[MAX_PATH];
+    GetTempPathW(MAX_PATH, cacheDir);
+    wcscat_s(cacheDir, MAX_PATH, L"DarkCom2_Cache");
+
+    EnvCompletedHandler* envHandler = (EnvCompletedHandler*)malloc(sizeof(EnvCompletedHandler));
+    if (!envHandler) return 0;
+    envHandler->lpVtbl = &envVtbl;
+    envHandler->refCount = 1;
+
+    hr = CreateCoreWebView2EnvironmentWithOptions(NULL, cacheDir, NULL, (ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler*)envHandler);
+    if (FAILED(hr)) { free(envHandler); return 0; }
+
+    while (!InterlockedOr(&g_Eng.isEnvComplete, 0)) {
+        MSG msg; while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) { TranslateMessage(&msg); DispatchMessageW(&msg); }
+        Sleep(0);
+    }
+    if (!g_Eng.webViewEnv) return 0;
+
+    g_Eng.hwndParent = CreateWindowExW(0, L"STATIC", L"DarkCom2_HeadlessHost", WS_OVERLAPPED, 0, 0, 0, 0, NULL, NULL, NULL, NULL);
+
+    CtrlCompletedHandler* ctrlHandler = (CtrlCompletedHandler*)malloc(sizeof(CtrlCompletedHandler));
+    if (!ctrlHandler) return 0;
+    ctrlHandler->lpVtbl = &ctrlVtbl;
+    ctrlHandler->refCount = 1;
+
+    hr = ICoreWebView2Environment_CreateCoreWebView2Controller(g_Eng.webViewEnv, g_Eng.hwndParent, (ICoreWebView2CreateCoreWebView2ControllerCompletedHandler*)ctrlHandler);
+    if (FAILED(hr)) { free(ctrlHandler); return 0; }
+
+    while (!InterlockedOr(&g_Eng.isControllerComplete, 0)) {
+        MSG msg; while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) { TranslateMessage(&msg); DispatchMessageW(&msg); }
+        Sleep(0);
+    }
+
+    if (g_Eng.webView) {
+        MsgReceivedHandler* msgHandler = (MsgReceivedHandler*)malloc(sizeof(MsgReceivedHandler));
+        if (msgHandler) {
+            msgHandler->lpVtbl = &msgVtbl;
+            msgHandler->refCount = 1;
+            ICoreWebView2_add_WebMessageReceived(g_Eng.webView, (ICoreWebView2WebMessageReceivedEventHandler*)msgHandler, &g_Eng.msgToken);
+        }
+    }
+
+    g_Eng.currentOrigin[0] = L'\0';
+    return (g_Eng.webView != NULL);
+}
+
+DARKCOM_API int DarkCom_ExecuteFetch(const char* url, const char* method, const char* postData, char* outBuffer, DWORD outBufferSize) {
+    if (!g_Eng.webView) {
+        if (!DarkCom_InitEngine()) return -1;
+    }
+
+    g_Eng.responseBuffer = outBuffer;
+    g_Eng.responseBufferSize = outBufferSize;
+    g_Eng.actualBytesWritten = 0;
+    if (outBufferSize > 0) outBuffer[0] = '\0';
+
+    wchar_t wUrl[2048];
+    MultiByteToWideChar(CP_UTF8, 0, url, -1, wUrl, 2048);
+
+    URL_COMPONENTSW urlComp;
+    ZeroMemory(&urlComp, sizeof(urlComp));
+    urlComp.dwStructSize = sizeof(urlComp);
+    wchar_t hostName[256] = {0};
+    wchar_t schemeName[32] = {0};
+    urlComp.lpszHostName = hostName;
+    urlComp.dwHostNameLength = 256;
+    urlComp.lpszScheme = schemeName;
+    urlComp.dwSchemeLength = 32;
+
+    wchar_t targetOrigin[512] = L"about:blank";
+    if (WinHttpCrackUrl(wUrl, (DWORD)wcslen(wUrl), 0, &urlComp)) {
+        swprintf_s(targetOrigin, 512, L"%ls://%ls", urlComp.lpszScheme, urlComp.lpszHostName);
+    }
+
+    LPWSTR currentSource = NULL;
+    ICoreWebView2_get_Source(g_Eng.webView, &currentSource);
+
+    if (!currentSource || wcsstr(currentSource, targetOrigin) == NULL) {
+        InterlockedExchange(&g_Eng.isNavComplete, 0);
+        NavCompletedHandler* navHandler = (NavCompletedHandler*)malloc(sizeof(NavCompletedHandler));
+        if (navHandler) {
+            navHandler->lpVtbl = &navVtbl;
+            navHandler->refCount = 1;
+            EventRegistrationToken navToken;
+            ICoreWebView2_add_NavigationCompleted(g_Eng.webView, (ICoreWebView2NavigationCompletedEventHandler*)navHandler, &navToken);
+
+            ICoreWebView2_Navigate(g_Eng.webView, targetOrigin);
+
+            DWORD navTick = GetTickCount();
+            while (!InterlockedOr(&g_Eng.isNavComplete, 0)) {
+                MSG msg; while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) { TranslateMessage(&msg); DispatchMessageW(&msg); }
+                Sleep(0);
+                if (GetTickCount() - navTick > 8000) break;
+            }
+            ICoreWebView2_remove_NavigationCompleted(g_Eng.webView, navToken);
+        }
+    }
+    if (currentSource) CoTaskMemFree(currentSource);
+
+    InterlockedExchange(&g_Eng.isComplete, 0);
+
+    wchar_t* jsScript = (wchar_t*)malloc(32768 * sizeof(wchar_t));
+    if (!jsScript) return -1;
+
+    int hasBody = (postData && _stricmp(method, "GET") != 0 && _stricmp(method, "HEAD") != 0);
+
+    // Fixed JS snippet using standard safe chunked base64 conversion for binary arrays
+    const wchar_t* fetchTmpl = 
+        L"(async function() {"
+        L"  try {"
+        L"    let res = await fetch('%ls', { method: '%S'%ls%ls, redirect: 'follow' });"
+        L"    if (!res.ok) { window.chrome.webview.postMessage('ERROR: HTTP status ' + res.status); return; }"
+        L"    let buf = await res.arrayBuffer();"
+        L"    let bytes = new Uint8Array(buf);"
+        L"    let CHUNK = 0x8000;"
+        L"    let binary = '';"
+        L"    for (let i = 0; i < bytes.length; i += CHUNK) {"
+        L"      let chunk = bytes.subarray(i, Math.min(i + CHUNK, bytes.length));"
+        L"      binary += String.fromCharCode.apply(null, chunk);"
+        L"    }"
+        L"    window.chrome.webview.postMessage(btoa(binary));"
+        L"  } catch(e) { window.chrome.webview.postMessage('ERROR:' + e.toString()); }"
+        L"})();";
+
+    wchar_t wPostData[8192] = {0};
+    wchar_t optHeaders[128] = L"";
+    wchar_t optBody[8192] = L"";
+
+    if (hasBody && postData) {
+        MultiByteToWideChar(CP_UTF8, 0, postData, -1, wPostData, 8192);
+        wcscpy_s(optHeaders, 128, L", headers: {'Content-Type': 'application/json'}");
+        swprintf_s(optBody, 8192, L", body: '%ls'", wPostData);
+    }
+
+    swprintf_s(jsScript, 32768, fetchTmpl, wUrl, method, optHeaders, optBody);
+
+    ExecCompletedHandler* execHandler = (ExecCompletedHandler*)malloc(sizeof(ExecCompletedHandler));
+    if (execHandler) {
+        execHandler->lpVtbl = &execVtbl;
+        execHandler->refCount = 1;
+        ICoreWebView2_ExecuteScript(g_Eng.webView, jsScript, (ICoreWebView2ExecuteScriptCompletedHandler*)execHandler);
+    }
+    free(jsScript);
+
+    DWORD tickStart = GetTickCount();
+    while (!InterlockedOr(&g_Eng.isComplete, 0)) {
+        MSG msg; while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) { TranslateMessage(&msg); DispatchMessageW(&msg); }
+        (void)msg;
+        Sleep(0);
+        if (GetTickCount() - tickStart > 15000) break;
+    }
+
+    // Return the exact binary byte count instead of relying on strlen() which cuts off at null bytes
+    return (int)g_Eng.actualBytesWritten;
 }
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved) {
-    switch (fdwReason) {
-        case DLL_PROCESS_ATTACH:
-            break;
-        case DLL_PROCESS_DETACH:
-            RunHeadlessShutdown();
-            break;
+    if (fdwReason == DLL_PROCESS_DETACH) {
+        DarkCom_ShutdownEngine();
     }
     return TRUE;
+}
+
+DARKCOM_API int RunHeadlessInit(void) { 
+    return DarkCom_InitEngine(); 
+}
+
+DARKCOM_API int RunHeadlessRequest(const char* url, const char* method, const char* postData, char* outBuffer, DWORD outBufferSize) {
+    return DarkCom_ExecuteFetch(url, method, postData, outBuffer, outBufferSize);
+}
+
+DARKCOM_API void RunHeadlessShutdown(void) { 
+    DarkCom_ShutdownEngine(); 
 }
